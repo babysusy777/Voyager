@@ -26,6 +26,7 @@ public class Traveller {
     private String country;
     private String password;
     private Preferences preferences;
+    private UserRole role;
 
     @Field("past_trips")
     private List<Trip> trips;
@@ -63,13 +64,29 @@ public class Traveller {
         private List<String> city; // partial embedding + linking, ci serve solo il nome
 
         @Field("hotel_name")
-        private List<String> hotelName; // solo nome, no embedding o linking
+        private List<HotelSummary> hotel; // solo nome, no embedding o linking
 
         private String season;
         private String date;
 
         @Field("rating_given")
         private int ratingGiven;
+
+        public static class HotelSummary {
+            @Field("hotel_name")
+            private String hotelName;
+
+            private int stars;
+
+            public HotelSummary(String name, int stars) {
+                this.hotelName = name;
+                this.stars = stars;
+            }
+            public String getHotelName() { return hotelName; }
+            public void setHotelName(String hotelName) { this.hotelName = hotelName; }
+            public int getStars() { return stars; }
+            public void setStars(int stars) { this.stars = stars; }
+        }
 
         // Getters & Setters
         public String getTripName() { return tripName; }
@@ -78,8 +95,8 @@ public class Traveller {
         public List<String> getCity() { return city; }
         public void setCity(List<String> city) { this.city = city; }
 
-        public List<String> getHotelName() { return hotelName; }
-        public void setHotelName(List<String> hotelName) { this.hotelName = hotelName; }
+        public List<HotelSummary> getHotels() { return hotel; }
+        public void setHotelName(List<HotelSummary> hotelName) { this.hotel = hotel; }
 
         public String getSeason() { return season; }
         public void setSeason(String season) { this.season = season; }
@@ -128,4 +145,7 @@ public class Traveller {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public void setRole(UserRole role) {this.role = role;}
+    public UserRole getRole() { return role;}
 }

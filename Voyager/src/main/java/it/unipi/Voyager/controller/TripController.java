@@ -1,11 +1,14 @@
 package it.unipi.Voyager.controller;
 
 import it.unipi.Voyager.dto.TripDTO;
+import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.service.TravellerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/trips")
@@ -37,5 +40,19 @@ public class TripController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Internal error.");
         }
+    }
+
+    // Recupera tutti i viaggi di un utente ordinati per data.
+    // URL: GET /api/trips/user/{userId}
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Traveller.Trip>> getPastTrips(@PathVariable String userId) {
+        List<Traveller.Trip> trips = travellerService.getTripsSortedByDate(userId);
+
+        if (trips.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(trips);
     }
 }

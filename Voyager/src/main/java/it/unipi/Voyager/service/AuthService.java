@@ -4,6 +4,7 @@ package it.unipi.Voyager.service;
 import it.unipi.Voyager.dto.ModifyPasswordRequest;*/
 import it.unipi.Voyager.dto.ModifyPasswordRequest;
 import it.unipi.Voyager.model.Traveller;
+import it.unipi.Voyager.model.UserRole;
 import it.unipi.Voyager.repository.TravellerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -20,7 +21,7 @@ public class AuthService {
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
-    public String registerTraveller(String fullName, String email, String password, String gender, int age, String budget, String country) {
+    public String registerTraveller(String fullName, String email, String password) {
         if (travellerRepository.existsByEmail(email)) {
             throw new RuntimeException("Email already registered");
         }
@@ -29,30 +30,20 @@ public class AuthService {
         newTraveller.setFullName(fullName);
         newTraveller.setEmail(email);
         newTraveller.setPassword(passwordEncoder.encode(password)); // Password cifrata
-        newTraveller.setAge(age);
-        newTraveller.setGender(gender);
-        newTraveller.setCountry(country);
-        newTraveller.setBudget(budget);
 
-        //COME SI FA HOST/TRAVELLER????????????????????????????
-        /*
-        if (isAdminUser(email, username)) {
-            newUser.setRole(UserRole.ADMINISTRATOR);
+        if (isAdminUser(email)) {
+            newTraveller.setRole(UserRole.HOST);
         } else {
-            newUser.setRole(UserRole.MARKETING_ANALYST);
+            newTraveller.setRole(UserRole.TRAVELLER);
         }
-         */
 
         travellerRepository.save(newTraveller);
         return "Traveller registered successfully!";
     }
 
-    /*
-    private boolean isAdminUser(String email, String username) {
-        return email.endsWith("@Voyager.com")
-                || username.equalsIgnoreCase("admin");
+    private boolean isAdminUser(String email) {
+        return email.endsWith("@Voyager.com");
     }
-    */
 
     public Traveller loginTraveller(String email, String password) {
         Optional<Traveller> userOpt = travellerRepository.findByEmail(email);

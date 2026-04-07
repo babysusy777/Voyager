@@ -8,9 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 @Document(collection = "hotels")
-/* * Indice fondamentale per le query Host:
- * Confronto tra hotel della stessa città e categoria[cite: 334].
- */
+// Indice fondamentale per le query Host in cui c'è il confronto tra hotel della stessa città e categoria.
 @CompoundIndex(name = "city_stars_idx", def = "{'cityName': 1, 'HotelRating': 1}")
 public class Hotel {
 

@@ -1,5 +1,7 @@
 package it.unipi.Voyager.dto;
 
+import it.unipi.Voyager.model.Traveller;
+
 import java.util.List;
 
 public class TripDTO {
@@ -19,7 +21,7 @@ public class TripDTO {
     public List<String> getCity() { return city; }
     public void setCity(List<String> city) { this.city = city; }
 
-    public List<String> getHotelName() { return hotelName; }
+    public List<Traveller.Trip.HotelSummary> getHotelName() { return hotelName; }
     public void setHotelName(List<String> hotelName) { this.hotelName = hotelName; }
 
     public String getSeason() { return season; }
