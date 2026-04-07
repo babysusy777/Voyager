@@ -16,16 +16,19 @@ public class Traveller {
     @Field("user_id")
     private String userId;
 
-    private String name;
+    @Field("name")
+    private String fullName;
     private String gender;
     private String email;
     private int age;
+    private String userSegment;
+    private String budget;
     private String country;
-
+    private String password;
     private Preferences preferences;
 
     @Field("past_trips")
-    private List<PastTrip> pastTrips;
+    private List<Trip> trips;
 
 
     public static class Preferences {
@@ -49,15 +52,18 @@ public class Traveller {
     }
 
 
-    public static class PastTrip {
+    public static class Trip {
+
+        @Id
+        private ObjectId id;
 
         @Field("trip_name")
         private String tripName;
 
-        private String city;
+        private List<String> city; // partial embedding + linking, ci serve solo il nome
 
-        @Field("hotel_id")
-        private String hotelId;
+        @Field("hotel_name")
+        private List<String> hotelName; // solo nome, no embedding o linking
 
         private String season;
         private String date;
@@ -69,11 +75,11 @@ public class Traveller {
         public String getTripName() { return tripName; }
         public void setTripName(String tripName) { this.tripName = tripName; }
 
-        public String getCity() { return city; }
-        public void setCity(String city) { this.city = city; }
+        public List<String> getCity() { return city; }
+        public void setCity(List<String> city) { this.city = city; }
 
-        public String getHotelId() { return hotelId; }
-        public void setHotelId(String hotelId) { this.hotelId = hotelId; }
+        public List<String> getHotelName() { return hotelName; }
+        public void setHotelName(List<String> hotelName) { this.hotelName = hotelName; }
 
         public String getSeason() { return season; }
         public void setSeason(String season) { this.season = season; }
@@ -85,7 +91,7 @@ public class Traveller {
         public void setRatingGiven(int ratingGiven) { this.ratingGiven = ratingGiven; }
     }
 
-    // ─── Getters & Setters (Traveller) ─────────────────────────
+    // ─── Getters & Setters (Traveler) ─────────────────────────
 
     public ObjectId getId() { return id; }
     public void setId(ObjectId id) { this.id = id; }
@@ -93,8 +99,8 @@ public class Traveller {
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String name) { this.fullName = name; }
 
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
@@ -111,6 +117,15 @@ public class Traveller {
     public Preferences getPreferences() { return preferences; }
     public void setPreferences(Preferences preferences) { this.preferences = preferences; }
 
-    public List<PastTrip> getPastTrips() { return pastTrips; }
-    public void setPastTrips(List<PastTrip> pastTrips) { this.pastTrips = pastTrips; }
+    public List<Trip> getTrips() { return trips; }
+    public void setTrips(List<Trip> trips) { this.trips = trips; }
+
+    public String getUser_segment() { return userSegment; }
+    public void setUser_segment(String user_segment) { this.userSegment = user_segment; }
+
+    public String getBudget() { return budget; }
+    public void setBudget(String budget) { this.budget = budget; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 }

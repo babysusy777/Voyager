@@ -8,9 +8,9 @@ import org.springframework.data.neo4j.core.schema.Relationship;
 public class AttractionNode {
 
     @Id
-    private String name; // Identificativo univoco del nodo [cite: 169]
+    private String name; // Identificativo univoco del nodo
 
-    private String category; // Tipologia (es. sport, cultural) [cite: 169]
+    private String category; // Tipologia (es. sport, cultural)
 
     @Relationship(type = "IN_CITY", direction = Relationship.Direction.OUTGOING)
     private CityNode city;

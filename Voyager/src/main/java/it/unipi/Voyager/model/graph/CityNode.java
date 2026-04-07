@@ -7,14 +7,10 @@ import org.springframework.data.neo4j.core.schema.Node;
 public class CityNode {
 
     @Id
-    private String cityName; // [cite: 169]
-
-    private String countryName; // [cite: 169]
+    private String cityName;
 
     // Getter e Setter
     public String getCityName() { return cityName; }
     public void setCityName(String cityName) { this.cityName = cityName; }
 
-    public String getCountryName() { return countryName; }
-    public void setCountryName(String countryName) { this.countryName = countryName; }
 }

@@ -7,9 +7,9 @@ import org.springframework.data.neo4j.core.schema.TargetNode;
 public class HotelNearRel {
 
     @TargetNode
-    private AttractionNode attraction; // Il nodo di destinazione dell'arco [cite: 169, 234]
+    private AttractionNode attraction; // Il nodo di destinazione dell'arco
 
-    private Double distance; // La proprietà "distanza" salvata sull'arco [cite: 169, 354]
+    private Double distance; // La proprietà "distanza" salvata sull'arco
 
     // --- GETTER E SETTER ---
 

@@ -33,7 +33,7 @@ public class City {
     @Field("city_index")
     private CityIndex cityIndex;
 
-    private List<HotelSummary> hotels;
+    private List<HotelSummary> hotels; // partial embedding
 
     @Field("top_attractions")
     private List<AttractionSummary> topAttractions;

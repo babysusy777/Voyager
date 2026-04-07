@@ -20,10 +20,11 @@ public class Host {
     @Field("full_name")
     private String fullName;
 
-    private List<HotelReference> hotels;
+    private List<HotelReference> hotels; //partial embedding
 
     // ─── Inner class ──────────────────────────────────────────────
 
+    // le statistiche sui visitatori dell'hotel stanno dentro il relativo hotel.
     public static class HotelReference {
 
         @Field("hotel_id")

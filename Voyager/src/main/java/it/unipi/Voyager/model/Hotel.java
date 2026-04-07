@@ -85,7 +85,7 @@ public class Hotel {
         private int totalVisits;
         private SeasonStats seasonality; // [cite: 115, 293]
         private SegmentDistribution segmentDistribution; // [cite: 116, 279]
-        private Double avgRatingGiven;
+
 
         // Getter e Setter per GuestStats...
         public int getTotalVisits() { return totalVisits; }
@@ -94,9 +94,7 @@ public class Hotel {
         public void setSeasonality(SeasonStats seasonality) { this.seasonality = seasonality; }
         public SegmentDistribution getSegmentDistribution() { return segmentDistribution; }
         public void setSegmentDistribution(SegmentDistribution segmentDistribution) { this.segmentDistribution = segmentDistribution; }
-        public Double getAvgRatingGiven() { return avgRatingGiven; }
-        public void setAvgRatingGiven(Double avgRatingGiven) { this.avgRatingGiven = avgRatingGiven; }
-    }
+         }
 
     public static class SeasonStats {
         private Map<String, Integer> counts;
