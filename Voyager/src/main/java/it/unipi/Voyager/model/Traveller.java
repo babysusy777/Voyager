@@ -76,16 +76,17 @@ public class Traveller {
             @Field("hotel_name")
             private String hotelName;
 
-            private int stars;
+            private String stars;
 
-            public HotelSummary(String name, int stars) {
+            public HotelSummary(String name, String stars) {
                 this.hotelName = name;
                 this.stars = stars;
             }
             public String getHotelName() { return hotelName; }
             public void setHotelName(String hotelName) { this.hotelName = hotelName; }
-            public int getStars() { return stars; }
-            public void setStars(int stars) { this.stars = stars; }
+
+            public String getHotelStars() { return stars; }
+            public void setHotelStars(String stars) { this.stars = stars; }
         }
 
         // Getters & Setters
@@ -96,7 +97,7 @@ public class Traveller {
         public void setCity(List<String> city) { this.city = city; }
 
         public List<HotelSummary> getHotels() { return hotel; }
-        public void setHotelName(List<HotelSummary> hotelName) { this.hotel = hotel; }
+        public void setHotels(List<HotelSummary> hotel) { this.hotel = hotel; }
 
         public String getSeason() { return season; }
         public void setSeason(String season) { this.season = season; }
@@ -137,8 +138,8 @@ public class Traveller {
     public List<Trip> getTrips() { return trips; }
     public void setTrips(List<Trip> trips) { this.trips = trips; }
 
-    public String getUser_segment() { return userSegment; }
-    public void setUser_segment(String user_segment) { this.userSegment = user_segment; }
+    public String getUserSegment() { return userSegment; }
+    public void setUserSegment(String userSegment) { this.userSegment = userSegment; }
 
     public String getBudget() { return budget; }
     public void setBudget(String budget) { this.budget = budget; }

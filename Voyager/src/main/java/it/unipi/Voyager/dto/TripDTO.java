@@ -7,7 +7,7 @@ import java.util.List;
 public class TripDTO {
     private String tripName;
     private List<String> city;
-    private List<String> hotelName;
+    private List<Traveller.Trip.HotelSummary> hotels;
     private String season;
     private String date;
     private int ratingGiven;
@@ -21,9 +21,9 @@ public class TripDTO {
     public List<String> getCity() { return city; }
     public void setCity(List<String> city) { this.city = city; }
 
-    public List<Traveller.Trip.HotelSummary> getHotelName() { return hotelName; }
-    public void setHotelName(List<String> hotelName) { this.hotelName = hotelName; }
-
+    public List<Traveller.Trip.HotelSummary> getHotels() { return hotels; }
+    public void setHotels(List<Traveller.Trip.HotelSummary> hotels) { this.hotels = hotels; }
+    
     public String getSeason() { return season; }
     public void setSeason(String season) { this.season = season; }
 

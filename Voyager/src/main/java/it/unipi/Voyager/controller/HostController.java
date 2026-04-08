@@ -1,19 +1,22 @@
 package it.unipi.Voyager.controller;
 
 import it.unipi.Voyager.dto.HostHotelUpdateRequest;
+import it.unipi.Voyager.dto.VisibilityGapDTO;
 import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.HotelRepository;
+import it.unipi.Voyager.service.HostService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 import it.unipi.Voyager.dto.HostHotelRequest;
 import it.unipi.Voyager.model.Host;
 import it.unipi.Voyager.model.Hotel;
 
 import java.util.ArrayList;
+import java.util.List;
 
+@RestController
+@RequestMapping("/api/hosts")
 public class HostController {
 
     @Autowired
@@ -21,6 +24,9 @@ public class HostController {
 
     @Autowired
     private HotelRepository hotelRepository;
+
+    @Autowired
+    private HostService hostService;
 
     @PostMapping("/add-hotel")
     public ResponseEntity<?> addHotel(@RequestBody HostHotelRequest request) {
@@ -112,5 +118,32 @@ public class HostController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+
+    // VERSIONE CON LOOKUP
+    @GetMapping("/{username}/visibility-gap")
+    public ResponseEntity<List<VisibilityGapDTO>> getVisibilityGap(@PathVariable String username) {
+
+        List<VisibilityGapDTO> report = hostService.getHostVisibilityGap(username);
+
+        if (report.isEmpty()) {
+            // Restituiamo 204 No Content se l'host non esiste o non ha hotel
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(report);
+    }
+
+    // VERSIONE CON CAMPO PRECALCOLATO
+    @GetMapping("/{username}/gap-simple")
+    public ResponseEntity<List<VisibilityGapDTO>> getGapSimple(@PathVariable String username) {
+        List<VisibilityGapDTO> report = hostService.getGapSimple(username);
+
+        if (report.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(report);
     }
 }

@@ -34,14 +34,14 @@ public class Hotel {
     private Double averagePrice;
 
     @Field("HotelFacilities")
-    private List<String> facilities; // Stringa o lista di servizi [cite: 168, 296]
+    private List<String> facilities; // Stringa o lista di servizi
 
     @Field("Description")
     private String description;
 
 
     /**
-     * Statistiche precomputate per la Dashboard Host[cite: 158, 299, 337].
+     * Statistiche precomputate per la Dashboard Host
      */
     private GuestStats guestStats;
 
@@ -81,8 +81,10 @@ public class Hotel {
 
     public static class GuestStats {
         private int totalVisits;
-        private SeasonStats seasonality; // [cite: 115, 293]
-        private SegmentDistribution segmentDistribution; // [cite: 116, 279]
+        private SeasonStats seasonality;
+        private SegmentDistribution segmentDistribution;
+        @Field("city_category_avg_visits")
+        private double cityCategoryAvgVisits;
 
 
         // Getter e Setter per GuestStats...
@@ -92,7 +94,9 @@ public class Hotel {
         public void setSeasonality(SeasonStats seasonality) { this.seasonality = seasonality; }
         public SegmentDistribution getSegmentDistribution() { return segmentDistribution; }
         public void setSegmentDistribution(SegmentDistribution segmentDistribution) { this.segmentDistribution = segmentDistribution; }
-         }
+        public double getCityCategoryAvgVisits() { return cityCategoryAvgVisits; }
+        public void setCityCategoryAvgVisits(double cityCategoryAvgVisits) {this.cityCategoryAvgVisits = this.cityCategoryAvgVisits;  }
+    }
 
     public static class SeasonStats {
         private Map<String, Integer> counts;

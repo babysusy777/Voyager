@@ -3,18 +3,15 @@ package it.unipi.Voyager.service;
 import it.unipi.Voyager.dto.TripDTO;
 import it.unipi.Voyager.model.Traveller;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.aggregation.Aggregation;
-import org.springframework.data.mongodb.core.aggregation.AggregationResults;
 import org.bson.Document;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import com.mongodb.client.result.UpdateResult;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TravellerService {
@@ -26,97 +23,112 @@ public class TravellerService {
      // Se non esiste, lo aggiunge alla lista past_trips.
 
     public void upsertTrip(String userId, TripDTO tripDto) {
+        // Trasformiamo il DTO in un Document (usando il converter di Spring per fare prima)
+        Document tripDoc = new Document();
+        mongoTemplate.getConverter().write(tripDto, tripDoc);
 
-        Traveller.Trip trip = new Traveller.Trip();
-        trip.setTripName(tripDto.getTripName());
-        trip.setCity(tripDto.getCity());
-        trip.setHotelName(tripDto.getHotelName());
-        trip.setSeason(tripDto.getSeason());
-        trip.setDate(tripDto.getDate());
-        trip.setRatingGiven(tripDto.getRatingGiven());
+        // Query: { "userId": "...", "trips.trip_name": "..." }
+        Document query = new Document("userId", userId)
+                .append("trips.trip_name", tripDto.getTripName());
 
-        Query queryUpdate = new Query(
-                Criteria.where("userId").is(userId).and("trips.trip_name").is(trip.getTripName())
-        );
+        // Update: { "$set": { "trips.$.city": "...", ... } }
+        Document updateFields = new Document("trips.$.city", tripDto.getCity())
+                .append("trips.$.hotel", tripDoc.get("hotels")) // hotels è già un Document/List
+                .append("trips.$.season", tripDto.getSeason())
+                .append("trips.$.date", tripDto.getDate())
+                .append("trips.$.rating_given", tripDto.getRatingGiven());
 
-        Update updateExisting = new Update()
-                .set("trips.$.city", trip.getCity())
-                .set("trips.$.hotel", trip.getHotels())
-                .set("trips.$.season", trip.getSeason())
-                .set("trips.$.date", trip.getDate())
-                .set("trips.$.rating_given", trip.getRatingGiven());
-
-        UpdateResult result = mongoTemplate.updateFirst(queryUpdate, updateExisting, Traveller.class);
+        UpdateResult result = mongoTemplate.getCollection("travellers")
+                .updateOne(query, new Document("$set", updateFields));
 
         if (result.getMatchedCount() == 0) {
-            Query queryPush = new Query(Criteria.where("userId").is(userId));
-            Update updatePush = new Update().push("trips", trip);
-
-            mongoTemplate.updateFirst(queryPush, updatePush, Traveller.class);
-            System.out.println("Nuovo viaggio aggiunto con successo.");
-        } else {
-            System.out.println("Viaggio esistente aggiornato con successo.");
+            // Se non esiste, facciamo il $push
+            mongoTemplate.getCollection("travellers").updateOne(
+                    new Document("userId", userId),
+                    new Document("$push", new Document("trips", tripDoc))
+            );
         }
     }
 
     public List<Traveller.Trip> getTripsSortedByDate(String userId) {
-
-        var matchStage = Aggregation.match(Criteria.where("userId").is(userId));
-
-        var unwindStage = Aggregation.unwind("trips");
-
-        var sortStage = Aggregation.sort(Sort.Direction.DESC, "trips.date");
-
-        var replaceRootStage = Aggregation.replaceRoot("trips");
-
-        Aggregation aggregation = Aggregation.newAggregation(
-                matchStage,
-                unwindStage,
-                sortStage,
-                replaceRootStage
+        List<Document> pipeline = Arrays.asList(
+                new Document("$match", new Document("userId", userId)),
+                new Document("$unwind", "$trips"),
+                new Document("$sort", new Document("trips.date", -1)),
+                new Document("$replaceRoot", new Document("newRoot", "$trips"))
         );
 
-        AggregationResults<Traveller.Trip> results = mongoTemplate.aggregate(
-                aggregation, "travellers", Traveller.Trip.class
-        );
+        List<Document> rawResults = new ArrayList<>();
+        mongoTemplate.getCollection("travellers").aggregate(pipeline).into(rawResults);
 
-        return results.getMappedResults();
+
+        return rawResults.stream()
+                .map(doc -> mongoTemplate.getConverter().read(Traveller.Trip.class, doc))
+                .collect(Collectors.toList());
     }
 
     public String getTravelerStarTrend(String userId) {
+        List<Document> pipeline = Arrays.asList(
+                // Match stage
+                new Document("$match", new Document("userId", userId)),
 
-        var matchStage = Aggregation.match(Criteria.where("userId").is(userId));
+                // Unwind stages
+                new Document("$unwind", "$past_trips"),
+                new Document("$unwind", "$past_trips.hotel_name"),
 
-        var unwindTrips = Aggregation.unwind("trips");
+                // Project stage con lo switch (Plain Mongo style)
+                new Document("$project", new Document("tripDate", "$past_trips.date")
+                        .append("starValue", new Document("$switch", new Document("branches", Arrays.asList(
+                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "oneStar"))).append("then", 1),
+                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "twoStars"))).append("then", 2),
+                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "threeStars"))).append("then", 3),
+                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "fourStars"))).append("then", 4),
+                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "fiveStars"))).append("then", 5)
+                        )).append("default", 0)))),
 
-        var unwindHotels = Aggregation.unwind("trips.hotels");
-
-        var sortStage = Aggregation.sort(Sort.Direction.ASC, "trips.date");
-
-        var groupStage = Aggregation.group("userId")
-                .push("trips.hotels.stars").as("starHistory");
-
-        Aggregation aggregation = Aggregation.newAggregation(
-                matchStage,
-                unwindTrips,
-                unwindHotels,
-                sortStage,
-                groupStage
+                // Sort e Group
+                new Document("$sort", new Document("tripDate", 1)),
+                new Document("$group", new Document("_id", "$_id")
+                        .append("starHistory", new Document("$push", "$starValue")))
         );
 
-        AggregationResults<Document> results = mongoTemplate.aggregate(aggregation, "travellers", Document.class);
-        Document res = results.getUniqueMappedResult();
+        Document res = mongoTemplate.getCollection("travellers").aggregate(pipeline).first();
 
-        if (res == null || !res.containsKey("starHistory")) {
-            return "DATI INSUFFICIENTI: Nessun hotel con stelle trovato per questo utente.";
-        }
-
-        List<Integer> starHistory = res.getList("starHistory", Integer.class);
-
-        return analyzeTrend(starHistory);
+        return (res != null) ? analyzeTrend(res.getList("starHistory", Integer.class)) : "DATI INSUFFICIENTI";
     }
 
     private String analyzeTrend(List<Integer> stars) {
-        return "stabile";
+
+        if (stars == null || stars.isEmpty()) {
+            return "DATI INSUFFICIENTI";
+        }
+        if (stars.size() < 2) {
+            return "STABILE (Dato singolo)";
+        }
+
+
+        int mid = stars.size() / 2;
+
+        double firstHalfAvg = stars.subList(0, mid).stream()
+                .mapToInt(Integer::intValue)
+                .average()
+                .orElse(0.0);
+
+        double secondHalfAvg = stars.subList(mid, stars.size()).stream()
+                .mapToInt(Integer::intValue)
+                .average()
+                .orElse(0.0);
+
+
+        double diff = secondHalfAvg - firstHalfAvg;
+        double threshold = 0.2;
+
+        if (diff > threshold) {
+            return "CRESCENTE (L'utente sta scegliendo hotel di qualità sempre maggiore)";
+        } else if (diff < -threshold) {
+            return "DECRESCENTE (L'utente sta riducendo lo standard degli hotel)";
+        } else {
+            return "STABILE (Le preferenze di qualità rimangono costanti nel tempo)";
+        }
     }
 }

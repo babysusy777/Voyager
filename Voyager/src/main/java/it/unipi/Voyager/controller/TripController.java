@@ -1,5 +1,6 @@
 package it.unipi.Voyager.controller;
 
+import it.unipi.Voyager.dto.TrendResponseDTO;
 import it.unipi.Voyager.dto.TripDTO;
 import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.service.TravellerService;
@@ -54,5 +55,23 @@ public class TripController {
         }
 
         return ResponseEntity.ok(trips);
+    }
+
+    @GetMapping("/user/{userId}/trend")
+    public ResponseEntity<TrendResponseDTO> getTravelerTrend(@PathVariable String userId) {
+        try {
+            String trendResult = travellerService.getTravelerStarTrend(userId);
+
+
+            String status = trendResult.contains("CRESCENTE") ? "CRESCENTE" :
+                    trendResult.contains("DECRESCENTE") ? "DECRESCENTE" : "STABILE";
+
+            TrendResponseDTO response = new TrendResponseDTO(userId, status, trendResult);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
