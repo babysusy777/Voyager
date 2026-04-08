@@ -95,7 +95,7 @@ public class Hotel {
         public SegmentDistribution getSegmentDistribution() { return segmentDistribution; }
         public void setSegmentDistribution(SegmentDistribution segmentDistribution) { this.segmentDistribution = segmentDistribution; }
         public double getCityCategoryAvgVisits() { return cityCategoryAvgVisits; }
-        public void setCityCategoryAvgVisits(double cityCategoryAvgVisits) {this.cityCategoryAvgVisits = this.cityCategoryAvgVisits;  }
+        public void setCityCategoryAvgVisits(double cityCategoryAvgVisits) {this.cityCategoryAvgVisits = cityCategoryAvgVisits;  }
     }
 
     public static class SeasonStats {
