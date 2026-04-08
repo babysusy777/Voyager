@@ -64,14 +64,18 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
     })
     FacilitiesGapDTO getFacilitiesGap(String city, String rating, double minRating, List<String> myFacilities);
     @Aggregation(pipeline = {
-            // 1. Raggruppiamo per città calcolando numero di hotel e somma delle visite
+            // 1. IL MATCH SFRUTTA L'INDICE: Filtra istantaneamente per città e (opzionalmente) rating
+            // Usiamo ?0 per cityName. Se vuoi filtrare anche per stelle, aggiungeresti ?1
+            "{ $match: { 'cityName': ?0 } }",
+
+            // 2. Raggruppamento: ora lavora solo sui documenti già estratti dall'indice
             "{ $group: { " +
                     "_id: '$cityName', " +
                     "hotelCount: { $sum: 1 }, " +
                     "totalCityVisits: { $sum: '$guestStats.totalVisits' } " +
                     "} }",
 
-            // 2. Calcoliamo il ratio (Demand / Supply)
+            // 3. Proiezione e calcolo del ratio
             "{ $project: { " +
                     "cityName: '$_id', " +
                     "hotelCount: 1, " +
@@ -85,5 +89,5 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
                     "} } " +
                     "} }"
     })
-    List<CityIndexDTO> getCityPressureIndex();
+    CityIndexDTO getCityPressureIndexWithIndex(String cityName);
 }

@@ -1,22 +1,24 @@
 package it.unipi.Voyager.dto;
 
-
-
 /**
  * Data Transfer Object per l'analisi Demand vs Supply della città.
- * Riflette i campi calcolati dalla pipeline di aggregazione sulla collezione hotels.
+ * Ottimizzato per riflettere l'uso del Compound Index (City + Rating).
  */
 public class CityIndexDTO {
-    private String cityName;      // Nome della città analizzata
-    private int hotelCount;       // Numero di hotel (Offerta)
-    private int totalCityVisits;  // Somma dei totalVisits di tutti gli hotel (Domanda) [cite: 166]
-    private Double demandRatio;   // Rapporto visite/hotel (Pressure Index)
-    private String status;        // Stato del mercato: UNDERSUPPLIED, OVERSUPPLIED, BALANCED [cite: 166]
+    private String cityName;
+    private String hotelRating;   // Aggiunto per matchare l'indice city_stars_idx
+    private int hotelCount;
+    private int totalCityVisits;
+    private Double demandRatio;
+    private String status;
 
     // --- GETTER E SETTER ---
 
     public String getCityName() { return cityName; }
     public void setCityName(String cityName) { this.cityName = cityName; }
+
+    public String getHotelRating() { return hotelRating; }
+    public void setHotelRating(String hotelRating) { this.hotelRating = hotelRating; }
 
     public int getHotelCount() { return hotelCount; }
     public void setHotelCount(int hotelCount) { this.hotelCount = hotelCount; }

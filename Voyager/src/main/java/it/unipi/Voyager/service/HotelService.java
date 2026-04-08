@@ -66,10 +66,14 @@ public class HotelService {
         );
     }
     public CityIndexDTO getCityIndex(String cityName) {
-        // Recuperiamo la lista e filtriamo per la città richiesta
-        return hotelRepository.getCityPressureIndex().stream()
-                .filter(c -> c.getCityName().equalsIgnoreCase(cityName))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Dati non disponibili per la città: " + cityName));
+        // Chiamata diretta alla repository con il parametro di filtro
+        CityIndexDTO index = hotelRepository.getCityPressureIndexWithIndex(cityName);
+
+        // Se la repository restituisce null (nessun hotel trovato per quella città)
+        if (index == null) {
+            throw new RuntimeException("Dati non disponibili per la città: " + cityName);
+        }
+
+        return index;
     }
 }

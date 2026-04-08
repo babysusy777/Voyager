@@ -53,7 +53,7 @@ public class AuthService {
     }
 
     private boolean isAdminUser(String email) {
-        return email.endsWith("@Voyager.com");
+        return email.endsWith("@voyager.com");
     }
 
     public Traveller loginTraveller(String email, String password) {

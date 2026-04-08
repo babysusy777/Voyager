@@ -5,6 +5,7 @@ import it.unipi.Voyager.model.City;
 import it.unipi.Voyager.repository.CityRepository;
 import it.unipi.Voyager.service.HotelService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,12 +29,17 @@ public class CityController {
                 .orElse(ResponseEntity.notFound().build()); //  404 Not Found se non esiste
     }
     @GetMapping("/city-intelligence")
-    public ResponseEntity<CityIndexDTO> getCityIntelligence(@RequestParam String cityName) {
+
+    public ResponseEntity<?> getCityIntelligence(@RequestParam String cityName) {
         try {
             CityIndexDTO index = hotelService.getCityIndex(cityName);
             return ResponseEntity.ok(index);
+        } catch (RuntimeException e) {
+            // Restituisce 404 se la città non esiste o non ha dati, con il messaggio del Service
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.notFound().build();
+            // Restituisce 500 per errori imprevisti (es. database offline)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-    }
+}
 }
