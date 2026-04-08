@@ -1,6 +1,7 @@
 package it.unipi.Voyager.controller;
 
 import it.unipi.Voyager.dto.HostHotelUpdateRequest;
+import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
 import it.unipi.Voyager.dto.VisibilityGapDTO;
 import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.HotelRepository;
@@ -146,4 +147,12 @@ public class HostController {
 
         return ResponseEntity.ok(report);
     }
+
+    @GetMapping("/seasonal-concentration")
+    public ResponseEntity<List<SeasonalConcentrationDTO>> getSeasonalConcentration(@RequestParam String email) {
+        List<SeasonalConcentrationDTO> result = hostService.getSeasonalConcentration(email);
+        if (result == null || result.isEmpty()) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(result);
+    }
+
 }

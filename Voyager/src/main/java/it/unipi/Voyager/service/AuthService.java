@@ -1,10 +1,10 @@
 package it.unipi.Voyager.service;
 
-/*import it.unipi.Voyager.dto.ModifyEmailRequest;
-import it.unipi.Voyager.dto.ModifyPasswordRequest;*/
 import it.unipi.Voyager.dto.ModifyPasswordRequest;
 import it.unipi.Voyager.model.Traveller;
+import it.unipi.Voyager.model.Host;
 import it.unipi.Voyager.model.UserRole;
+import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.TravellerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -17,6 +17,8 @@ public class AuthService {
 
     @Autowired
     private TravellerRepository travellerRepository;
+    @Autowired
+    private HostRepository hostRepository;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
@@ -25,20 +27,29 @@ public class AuthService {
         if (travellerRepository.existsByEmail(email)) {
             throw new RuntimeException("Email already registered");
         }
-
-        Traveller newTraveller = new Traveller();
-        newTraveller.setFullName(fullName);
-        newTraveller.setEmail(email);
-        newTraveller.setPassword(passwordEncoder.encode(password)); // Password cifrata
-
-        if (isAdminUser(email)) {
-            newTraveller.setRole(UserRole.HOST);
-        } else {
-            newTraveller.setRole(UserRole.TRAVELLER);
+        if (hostRepository.existsByEmail(email)) {
+            throw new RuntimeException("Email already registered");
         }
 
-        travellerRepository.save(newTraveller);
-        return "Traveller registered successfully!";
+        if (isAdminUser(email)) {
+            Host newHost= new Host();
+            newHost.setFullName(fullName);
+            newHost.setEmail(email);
+            newHost.setPassword(passwordEncoder.encode(password)); // Password cifrata
+            newHost.setRole(UserRole.HOST);
+            hostRepository.save(newHost);
+            return "Traveller registered successfully!";
+        } else {
+            Traveller newTraveller = new Traveller();
+            newTraveller.setFullName(fullName);
+            newTraveller.setEmail(email);
+            newTraveller.setPassword(passwordEncoder.encode(password)); // Password cifrata
+            newTraveller.setRole(UserRole.TRAVELLER);
+            travellerRepository.save(newTraveller);
+            return "Traveller registered successfully!";
+        }
+
+
     }
 
     private boolean isAdminUser(String email) {

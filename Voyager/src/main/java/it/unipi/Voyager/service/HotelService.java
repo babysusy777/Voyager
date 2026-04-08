@@ -1,5 +1,9 @@
 package it.unipi.Voyager.service;
 
+import it.unipi.Voyager.dto.CityIndexDTO;
+import it.unipi.Voyager.dto.FacilitiesGapDTO;
+import it.unipi.Voyager.model.Hotel;
+import it.unipi.Voyager.repository.HotelRepository;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -13,6 +17,9 @@ public class HotelService {
 
     @Autowired
     private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private HotelRepository hotelRepository;
 
     public void updateCityCategoryAvgVisits(String cityName, String hotelRating) {
 
@@ -45,5 +52,24 @@ public class HotelService {
         mongoTemplate.getCollection("hotels").aggregate(pipeline).toCollection();
 
         System.out.println("Update completato per " + cityName + " [" + hotelRating + "]");
+    }
+
+    public FacilitiesGapDTO getFacilitiesGap(String hotelName, String cityName) {
+        Hotel hotel = hotelRepository.findByHotelNameAndCityName(hotelName, cityName)
+                .orElseThrow(() -> new RuntimeException("Hotel not found"));
+
+        return hotelRepository.getFacilitiesGap(
+                hotel.getCityName(),
+                hotel.getHotelRating(),
+                4.3,
+                hotel.getFacilities()
+        );
+    }
+    public CityIndexDTO getCityIndex(String cityName) {
+        // Recuperiamo la lista e filtriamo per la città richiesta
+        return hotelRepository.getCityPressureIndex().stream()
+                .filter(c -> c.getCityName().equalsIgnoreCase(cityName))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Dati non disponibili per la città: " + cityName));
     }
 }

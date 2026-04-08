@@ -1,12 +1,16 @@
 package it.unipi.Voyager.service;
 
+import it.unipi.Voyager.dto.FacilitiesGapDTO;
+import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
 import it.unipi.Voyager.dto.VisibilityGapDTO;
 import it.unipi.Voyager.model.Host;
+import it.unipi.Voyager.model.Hotel;
+import it.unipi.Voyager.repository.HostRepository;
+import it.unipi.Voyager.repository.HotelRepository;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
-import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -18,13 +22,18 @@ public class HostService {
     @Autowired
     private MongoTemplate mongoTemplate;
 
+    @Autowired
+    private HotelRepository hotelRepository;
+
+    @Autowired
+    private HostRepository hostRepository;
+
     // VERSIONE CON LOOKUP
     public List<VisibilityGapDTO> getHostVisibilityGap(String username) {
 
         List<Document> pipeline = Arrays.asList(
 
                 new Document("$match", new Document("username", username)),
-
 
                 new Document("$unwind", "$hotels"),
 
@@ -129,5 +138,18 @@ public class HostService {
             );
 
         }).filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
+    public List<SeasonalConcentrationDTO> getSeasonalConcentration(String hostEmail) {
+        //la gestiamo con linking, dall'host recupero gli id dei suoi hotel e poi faccio l'aggregation sull'hotel
+
+        Host host = hostRepository.findByEmail(hostEmail)
+                .orElseThrow(() -> new RuntimeException("Host not found"));
+
+        List<String> hotelIds = host.getHotels().stream()
+                .map(Host.HotelReference::getHotelId)
+                .toList();
+
+        return hotelRepository.getSeasonalConcentrationByIds(hotelIds);
     }
 }

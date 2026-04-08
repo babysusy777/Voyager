@@ -100,16 +100,10 @@ public class Hotel {
 
     public static class SeasonStats {
         private Map<String, Integer> counts;
-        private String peakSeason;
-        private Double concentrationRatio; // KPI: rischio stagionalità [cite: 159, 293]
 
-        // Getter e Setter per SeasonStats...
+        // Getter e Setter per SeasonStats
         public Map<String, Integer> getCounts() { return counts; }
         public void setCounts(Map<String, Integer> counts) { this.counts = counts; }
-        public String getPeakSeason() { return peakSeason; }
-        public void setPeakSeason(String peakSeason) { this.peakSeason = peakSeason; }
-        public Double getConcentrationRatio() { return concentrationRatio; }
-        public void setConcentrationRatio(Double concentrationRatio) { this.concentrationRatio = concentrationRatio; }
     }
 
     public static class SegmentDistribution {

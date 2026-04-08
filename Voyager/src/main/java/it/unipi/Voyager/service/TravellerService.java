@@ -1,7 +1,11 @@
 package it.unipi.Voyager.service;
 
+import it.unipi.Voyager.dto.TravelHabitDTO;
+import it.unipi.Voyager.dto.TravellerSegmentDTO;
 import it.unipi.Voyager.dto.TripDTO;
+import it.unipi.Voyager.dto.TripFrequencyDTO;
 import it.unipi.Voyager.model.Traveller;
+import it.unipi.Voyager.repository.TravellerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.bson.Document;
@@ -19,9 +23,32 @@ public class TravellerService {
     @Autowired
     private MongoTemplate mongoTemplate;
 
+    @Autowired
+    private TravellerRepository travellerRepository;
+
      // Se il viaggio con lo stesso nome esiste, lo aggiorna.
      // Se non esiste, lo aggiunge alla lista past_trips.
+     public TravelHabitDTO getTravelHabitsByEmail(String email) {
+         // 1. Cerchiamo il traveller tramite l'email
+         Traveller traveller = travellerRepository.findByEmail(email)
+                 .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
 
+         // 2. Chiamiamo la query di aggregazione usando l'ID dell'utente trovato
+         return travellerRepository.getTravelHabits(traveller.getId());
+     }
+    public TripFrequencyDTO getTripFrequencyByEmail(String email) {
+        // 1. Recupero l'utente tramite email [cite: 89, 255]
+        Traveller traveller = travellerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
+
+        // 2. Validazione: servono almeno 2 viaggi per calcolare un intervallo (gap)
+        if (traveller.getTrips() == null || traveller.getTrips().size() < 2) {
+            throw new RuntimeException("Dati insufficienti: sono necessari almeno 2 viaggi per l'analisi della frequenza.");
+        }
+
+        // 3. Esecuzione della query di aggregazione sull'ID dell'utente trovato [cite: 291]
+        return travellerRepository.getTripFrequency(traveller.getId());
+    }
     public void upsertTrip(String userId, TripDTO tripDto) {
         // Trasformiamo il DTO in un Document (usando il converter di Spring per fare prima)
         Document tripDoc = new Document();
@@ -130,5 +157,9 @@ public class TravellerService {
         } else {
             return "STABILE (Le preferenze di qualità rimangono costanti nel tempo)";
         }
+    }
+
+    public TravellerSegmentDTO getTravellerSegment(String email) {
+        return travellerRepository.computeSegment(email);
     }
 }

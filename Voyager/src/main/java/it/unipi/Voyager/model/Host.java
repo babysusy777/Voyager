@@ -20,6 +20,8 @@ public class Host {
     @Field("full_name")
     private String fullName;
 
+    private UserRole role;
+
     private List<HotelReference> hotels; //partial embedding
 
     // ─── Inner class ──────────────────────────────────────────────
@@ -70,4 +72,7 @@ public class Host {
 
     public List<HotelReference> getHotels() { return hotels; }
     public void setHotels(List<HotelReference> hotels) { this.hotels = hotels; }
+
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
 }
