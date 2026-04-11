@@ -21,7 +21,7 @@ public class TripController {
      // Endpoint per aggiungere un nuovo viaggio o aggiornarne uno esistente
      // per un determinato utente.
 
-    @PostMapping("/upsert/{userId}")
+    @PostMapping("/{email}/upsert")
     public ResponseEntity<String> upsertTrip(
             @PathVariable String email,
             @RequestBody TripDTO tripDto) {
@@ -46,9 +46,9 @@ public class TripController {
     // Recupera tutti i viaggi di un utente ordinati per data.
     // URL: GET /api/trips/user/{userId}
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Traveller.Trip>> getPastTrips(@PathVariable String userId) {
-        List<Traveller.Trip> trips = travellerService.getTripsSortedByDate(userId);
+    @GetMapping("/{email}/trip")
+    public ResponseEntity<List<Traveller.Trip>> getPastTrips(@PathVariable String email) {
+        List<Traveller.Trip> trips = travellerService.getTripsSortedByDate(email);
 
         if (trips.isEmpty()) {
             return ResponseEntity.noContent().build();
@@ -57,16 +57,16 @@ public class TripController {
         return ResponseEntity.ok(trips);
     }
 
-    @GetMapping("/user/{userId}/trend")
-    public ResponseEntity<TrendResponseDTO> getTravelerTrend(@PathVariable String userId) {
+    @GetMapping("/{email}/trend")
+    public ResponseEntity<TrendResponseDTO> getTravelerTrend(@PathVariable String email) {
         try {
-            String trendResult = travellerService.getTravelerStarTrend(userId);
+            String trendResult = travellerService.getTravelerStarTrend(email);
 
 
             String status = trendResult.contains("CRESCENTE") ? "CRESCENTE" :
                     trendResult.contains("DECRESCENTE") ? "DECRESCENTE" : "STABILE";
 
-            TrendResponseDTO response = new TrendResponseDTO(userId, status, trendResult);
+            TrendResponseDTO response = new TrendResponseDTO(email, status, trendResult);
 
             return ResponseEntity.ok(response);
 

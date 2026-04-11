@@ -13,8 +13,8 @@ public class Traveller {
     @Id
     private ObjectId id;
 
-    @Field("user_id")
-    private String userId;
+    //@Field("user_id")
+    //private String userId;
 
     @Field("name")
     private String fullName;
@@ -112,12 +112,12 @@ public class Traveller {
 
     public String getTravelType() { return travelType; }
     public void setTravelType(String travelType) { this.travelType = travelType; }
-    
+
     public ObjectId getId() { return id; }
     public void setId(ObjectId id) { this.id = id; }
 
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    //public String getUserId() { return userId; }
+    //public void setUserId(String userId) { this.userId = userId; }
 
     public String getFullName() { return fullName; }
     public void setFullName(String name) { this.fullName = name; }

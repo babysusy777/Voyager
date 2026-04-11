@@ -10,8 +10,10 @@ import java.util.List;
 @Node("Traveller")
 public class TravellerNode {
 
+
+    //private String userId;
+
     @Id
-    private String userId;
     private String email;
 
     private int age;
@@ -32,8 +34,11 @@ public class TravellerNode {
 
 
     // Getters e Setters
-    public String getUserId() { return userId; }
-    public void setUserId(String userId) { this.userId = userId; }
+    //public String getUserId() { return userId; }
+    //public void setUserId(String userId) { this.userId = userId; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
     public int getAge() { return age; }
     public void setAge(int age) { this.age = age; }

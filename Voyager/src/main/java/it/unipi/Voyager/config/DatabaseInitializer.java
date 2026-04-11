@@ -20,28 +20,34 @@ public class DatabaseInitializer {
 
     @Autowired
     private MongoTemplate mongoTemplate;
+
     @Autowired
     private TravellerGraphRepository travellerNodeRepository;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeHotelStats() {
+        // Esegui gli step solo se guestStats non è ancora stato popolato
+        // Controlla se almeno un hotel ha totalVisits > 0
+        long alreadyPopulated = mongoTemplate.getCollection("hotels")
+                .countDocuments(new Document("guestStats.totalVisits", new Document("$gt", 0)));
+
+        if (alreadyPopulated > 0) {
+            System.out.println("[Init] guestStats già popolato, skip.");
+            return;
+        }
 
         // Step 1: totalVisits + seasonality.counts su ogni hotel
         populateGuestStats();
-
         // Step 2: city_category_avg_visits (dipende da Step 1)
         populateCityCategoryAvgVisits();
-
         // Step 3: calcola user_segment e lo salva su ogni traveller
         populateTravellerSegments();
-
         // Step 4: segment_distribution + preference_distribution su ogni hotel (dipende da Step 3)
         populateSegmentAndPreferenceDistribution();
+        // Step 5: calcola travelType su tutti i nodi Traveller in Neo4j
+        populateTravelTypes();
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // STEP 1 — totalVisits + seasonality.counts
-    // ─────────────────────────────────────────────────────────────
     private void populateGuestStats() {
         System.out.println("[Init] Step 1 — totalVisits e seasonality.counts...");
 
@@ -51,7 +57,10 @@ public class DatabaseInitializer {
 
                 new Document("$unwind", "$past_trips"),
 
-                new Document("$group", new Document("_id", "$past_trips.hotel_name")
+                // Raggruppa per coppia (hotel_name, city)
+                new Document("$group", new Document("_id", new Document()
+                        .append("hotelName", "$past_trips.hotel_name")
+                        .append("cityName", "$past_trips.city"))
                         .append("totalVisits", new Document("$sum", 1))
                         .append("spring", new Document("$sum", new Document("$cond", Arrays.asList(
                                 new Document("$eq", Arrays.asList("$past_trips.season", "spring")), 1, 0))))
@@ -64,7 +73,8 @@ public class DatabaseInitializer {
                 ),
 
                 new Document("$project", new Document("_id", 0)
-                        .append("HotelName", "$_id")
+                        .append("HotelName", "$_id.hotelName")
+                        .append("cityName", "$_id.cityName")
                         .append("guestStats", new Document("totalVisits", "$totalVisits")
                                 .append("seasonality", new Document("counts", new Document()
                                         .append("spring", "$spring")
@@ -76,7 +86,7 @@ public class DatabaseInitializer {
                 ),
 
                 new Document("$merge", new Document("into", "hotels")
-                        .append("on", "HotelName")
+                        .append("on", Arrays.asList("HotelName", "cityName"))
                         .append("whenMatched", Arrays.asList(
                                 new Document("$set", new Document("guestStats", "$$new.guestStats"))
                         ))
@@ -88,9 +98,6 @@ public class DatabaseInitializer {
         System.out.println("[Init] Step 1 completato.");
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // STEP 2 — city_category_avg_visits
-    // ─────────────────────────────────────────────────────────────
     private void populateCityCategoryAvgVisits() {
         System.out.println("[Init] Step 2 — city_category_avg_visits...");
 
@@ -139,11 +146,6 @@ public class DatabaseInitializer {
         System.out.println("[Init] Step 2 completato.");
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // STEP 3 — user_segment su ogni traveller
-    // Stessa logica della query T1, scritta come campo precomputato
-    // sul documento traveller per poterla usare nello Step 4.
-    // ─────────────────────────────────────────────────────────────
     private void populateTravellerSegments() {
         System.out.println("[Init] Step 3 — user_segment sui travellers...");
 
@@ -159,13 +161,10 @@ public class DatabaseInitializer {
                         .append("total_trips",   new Document("$sum", 1))
                 ),
 
-                // Calcola unique_cities, avg_stars, repeat_ratio
                 new Document("$project", new Document()
                         .append("unique_cities_count", new Document("$size", "$unique_cities"))
                         .append("avg_stars", 1)
                         .append("total_trips", 1)
-                        // repeat_ratio = 1 - (città uniche / totale trip)
-                        // più trip sulla stessa città → ratio più alto
                         .append("repeat_ratio", new Document("$subtract", Arrays.asList(
                                 1,
                                 new Document("$divide", Arrays.asList(
@@ -175,7 +174,6 @@ public class DatabaseInitializer {
                         )))
                 ),
 
-                // Classifica nel segmento
                 new Document("$project", new Document()
                         .append("user_segment", new Document("$switch", new Document("branches", Arrays.asList(
                                 new Document("case", new Document("$and", Arrays.asList(
@@ -205,12 +203,6 @@ public class DatabaseInitializer {
         System.out.println("[Init] Step 3 completato.");
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // STEP 4 — segment_distribution + preference_distribution
-    // Usa user_segment (Step 3) e trip_budget/season già nei past_trips.
-    // Il $merge aggiunge solo questi due campi senza toccare
-    // totalVisits e seasonality scritti negli step precedenti.
-    // ─────────────────────────────────────────────────────────────
     private void populateSegmentAndPreferenceDistribution() {
         System.out.println("[Init] Step 4 — segment_distribution e preference_distribution...");
 
@@ -220,8 +212,10 @@ public class DatabaseInitializer {
 
                 new Document("$unwind", "$past_trips"),
 
-                // Raggruppa per hotel: conta visite totali e breakdown per segmento/budget/stagione
-                new Document("$group", new Document("_id", "$past_trips.hotel_name")
+                // Raggruppa per coppia (hotel_name, city)
+                new Document("$group", new Document("_id", new Document()
+                        .append("hotelName", "$past_trips.hotel_name")
+                        .append("cityName",  "$past_trips.city"))
                         .append("total", new Document("$sum", 1))
 
                         // segment counts
@@ -253,9 +247,9 @@ public class DatabaseInitializer {
                                 new Document("$eq", Arrays.asList("$past_trips.season", "winter")), 1, 0))))
                 ),
 
-                // Calcola proporzioni e dominant per ogni distribuzione
                 new Document("$project", new Document("_id", 0)
-                        .append("HotelName", "$_id")
+                        .append("HotelName", "$_id.hotelName")
+                        .append("cityName",  "$_id.cityName")
                         .append("guestStats", new Document()
 
                                 .append("segment_distribution", new Document()
@@ -325,10 +319,8 @@ public class DatabaseInitializer {
                         )
                 ),
 
-                // Merge: aggiunge solo segment_distribution e preference_distribution
-                // senza sovrascrivere totalVisits e seasonality degli step precedenti
                 new Document("$merge", new Document("into", "hotels")
-                        .append("on", "HotelName")
+                        .append("on", Arrays.asList("HotelName", "cityName"))
                         .append("whenMatched", Arrays.asList(
                                 new Document("$set", new Document()
                                         .append("guestStats.segment_distribution",    "$$new.guestStats.segment_distribution")
@@ -342,7 +334,7 @@ public class DatabaseInitializer {
         travellers.aggregate(pipeline).toCollection();
         System.out.println("[Init] Step 4 completato.");
     }
-    // Step 5: calcola travelType su tutti i nodi Traveller in Neo4j
+
     private void populateTravelTypes() {
         System.out.println("[Init] Step 5 — travelType sui nodi Traveller Neo4j...");
         travellerNodeRepository.computeAndStoreTravelTypeAll();

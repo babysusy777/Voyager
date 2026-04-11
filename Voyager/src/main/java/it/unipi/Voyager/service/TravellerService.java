@@ -112,44 +112,35 @@ public class TravellerService {
         travellerNodeRepository.computeAndStoreTravelType(email);
     }
 
-    public List<Traveller.Trip> getTripsSortedByDate(String userId) {
+    public List<Traveller.Trip> getTripsSortedByDate(String email) {
         List<Document> pipeline = Arrays.asList(
-                new Document("$match", new Document("userId", userId)),
-                new Document("$unwind", "$trips"),
-                new Document("$sort", new Document("trips.date", -1)),
-                new Document("$replaceRoot", new Document("newRoot", "$trips"))
+                new Document("$match", new Document("email", email)),
+                new Document("$unwind", "$past_trips"),
+                new Document("$sort", new Document("past_trips.date", -1)),
+                new Document("$replaceRoot", new Document("newRoot", "$past_trips"))
         );
 
         List<Document> rawResults = new ArrayList<>();
         mongoTemplate.getCollection("travellers").aggregate(pipeline).into(rawResults);
-
 
         return rawResults.stream()
                 .map(doc -> mongoTemplate.getConverter().read(Traveller.Trip.class, doc))
                 .collect(Collectors.toList());
     }
 
-    public String getTravelerStarTrend(String userId) {
+    public String getTravelerStarTrend(String email) {
         List<Document> pipeline = Arrays.asList(
-                // Match stage
-                new Document("$match", new Document("userId", userId)),
 
-                // Unwind stages
+                new Document("$match", new Document("email", email)),
+
                 new Document("$unwind", "$past_trips"),
-                new Document("$unwind", "$past_trips.hotel_name"),
 
-                // Project stage con lo switch (Plain Mongo style)
+                // hotel_stars è già un intero sul trip — nessun $switch necessario
                 new Document("$project", new Document("tripDate", "$past_trips.date")
-                        .append("starValue", new Document("$switch", new Document("branches", Arrays.asList(
-                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "oneStar"))).append("then", 1),
-                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "twoStars"))).append("then", 2),
-                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "threeStars"))).append("then", 3),
-                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "fourStars"))).append("then", 4),
-                                new Document("case", new Document("$eq", Arrays.asList("$past_trips.hotel_name.stars", "fiveStars"))).append("then", 5)
-                        )).append("default", 0)))),
+                        .append("starValue", "$past_trips.hotel_stars")),
 
-                // Sort e Group
                 new Document("$sort", new Document("tripDate", 1)),
+
                 new Document("$group", new Document("_id", "$_id")
                         .append("starHistory", new Document("$push", "$starValue")))
         );

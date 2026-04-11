@@ -1,10 +1,15 @@
 package it.unipi.Voyager.model.graph;
 
 import org.bson.types.ObjectId;
+import org.springframework.data.neo4j.core.schema.GeneratedValue;
+import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
 public class TripNode {
-    private ObjectId tripID;
+
+    @Id
+    @GeneratedValue
+    private Long tripID;
 
     private int ratingGiven;
 

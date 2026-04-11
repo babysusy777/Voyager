@@ -1,5 +1,6 @@
 package it.unipi.Voyager.model.graph;
 
+import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
@@ -8,6 +9,9 @@ import java.util.List;
 @Node("Hotel")
 public class HotelNode {
 
+    @Id
+    @GeneratedValue
+    private Long id;
     private String hotelName;
 
     private int stars; // Rating utile per i filtri di budget

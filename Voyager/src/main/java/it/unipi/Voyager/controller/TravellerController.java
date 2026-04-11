@@ -39,11 +39,11 @@ public class TravellerController {
             traveller.setCountry(request.getCountry());
             traveller.setGender(request.getGender());
             traveller.setAge(request.getAge());
+            traveller.setTravelType(request.getTravelType());
 
             // Preferences
             Traveller.Preferences prefs = new Traveller.Preferences();
             prefs.setBudget(request.getBudget());
-            prefs.setTravelType(request.getTravelType());
             prefs.setSeason(request.getSeason());
             traveller.setPreferences(prefs);
 

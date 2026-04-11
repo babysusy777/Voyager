@@ -42,6 +42,12 @@ public class DataIngestionService {
             return;
         }
         try {
+            // Crea l'indice unique su HotelName + cityName PRIMA dell'inserimento
+            mongoTemplate.getCollection("hotels").createIndex(
+                    new Document("HotelName", 1).append("cityName", 1),
+                    new com.mongodb.client.model.IndexOptions().unique(true)
+            );
+
             InputStream is = new ClassPathResource("hotel_ai_pricing.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
@@ -181,6 +187,8 @@ public class DataIngestionService {
                             .append("season",       t.path("season").asText())
                             .append("date",         t.path("date").asText())
                             .append("rating_given", t.path("rating_given").asInt())
+                            .append("hotel_stars",  t.path("hotel_stars").asInt())
+                            .append("trip_budget",  t.path("trip_budget").asText())
                     );
                 }
                 doc.append("past_trips", trips);

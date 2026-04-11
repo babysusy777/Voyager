@@ -1,6 +1,5 @@
 package it.unipi.Voyager.config;
 
-
 import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.TravellerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+
 @Configuration
 public class SecurityConfig {
 
@@ -41,8 +41,19 @@ public class SecurityConfig {
                                 "/api/auth/**"
                         ).permitAll()
 
-                        .requestMatchers("/api/**/host/**").hasAuthority("HOST")
-                        .requestMatchers("/api/**/traveller/**").hasAuthority("TRAVELLER")
+                        // Endpoint HOST
+                        .requestMatchers("/api/host/**").hasAuthority("HOST")
+                        .requestMatchers("/api/hotels/host/**").hasAuthority("HOST")
+                        .requestMatchers("/api/cities/host/**").hasAuthority("HOST")
+
+                        // Endpoint TRAVELLER
+                        .requestMatchers("/api/traveller/**").hasAuthority("TRAVELLER")
+                        .requestMatchers("/api/trips/traveller/**").hasAuthority("TRAVELLER")
+                        .requestMatchers("/api/cities/traveller/**").hasAuthority("TRAVELLER")
+
+                        // Endpoint pubblici/condivisi
+                        .requestMatchers("/api/hotels/search").authenticated()
+                        .requestMatchers("/api/cities/top-attractions").authenticated()
 
                         .anyRequest().authenticated()
                 )

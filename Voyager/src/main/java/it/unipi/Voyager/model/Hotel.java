@@ -10,6 +10,7 @@ import java.util.Map;
 @Document(collection = "hotels")
 // Indice fondamentale per le query Host in cui c'è il confronto tra hotel della stessa città e categoria.
 @CompoundIndex(name = "city_stars_idx", def = "{'cityName': 1, 'HotelRating': 1}")
+@CompoundIndex(name = "hotel_city_unique_idx", def = "{'HotelName': 1, 'cityName': 1}", unique = true)
 public class Hotel {
 
     @Id
