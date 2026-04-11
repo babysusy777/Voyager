@@ -11,6 +11,7 @@ import java.util.List;
 @Repository
 public interface AttractionRepository extends Neo4jRepository<AttractionNode, String> {
 
+    // Most popular attractions
     @Query("""
         MATCH (h:Hotel)-[:LOCATED_IN]->(c:City {cityName: $cityName})
         MATCH (h)-[:NEAR_TO]->(a:Attraction)

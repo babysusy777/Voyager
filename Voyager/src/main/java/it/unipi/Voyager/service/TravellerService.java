@@ -6,6 +6,7 @@ import it.unipi.Voyager.dto.TripDTO;
 import it.unipi.Voyager.dto.TripFrequencyDTO;
 import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.repository.TravellerRepository;
+import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.bson.Document;
@@ -29,12 +30,17 @@ public class TravellerService {
     @Autowired
     private HotelService hotelService;
 
+    @Autowired
+    private TravellerGraphRepository travellerNodeRepository;
+
+
      // Se il viaggio con lo stesso nome esiste, lo aggiorna.
      // Se non esiste, lo aggiunge alla lista past_trips.
      public TravelHabitDTO getTravelHabitsByEmail(String email) {
          // 1. Cerchiamo il traveller tramite l'email
          Traveller traveller = travellerRepository.findByEmail(email)
                  .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
+
 
          // 2. Chiamiamo la query di aggregazione usando l'ID dell'utente trovato
          return travellerRepository.getTravelHabits(traveller.getId());
@@ -57,6 +63,9 @@ public class TravellerService {
     public void upsertTrip(String email, TripDTO tripDto) {
         Document tripDoc = new Document();
         mongoTemplate.getConverter().write(tripDto, tripDoc);
+
+        Traveller traveller = travellerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
 
         // Usa email come chiave di ricerca
         Document query = new Document("email", email)
@@ -99,6 +108,8 @@ public class TravellerService {
                     new Document("$set", new Document("user_segment", newSegment.getSegment()))
             );
         }
+        // Ricalcola travelType sul nodo Neo4j dopo un nuovo trip
+        travellerNodeRepository.computeAndStoreTravelType(email);
     }
 
     public List<Traveller.Trip> getTripsSortedByDate(String userId) {

@@ -10,6 +10,7 @@ public class TripDTO {
     private List<Traveller.Trip.HotelSummary> hotels;
     private String season;
     private String date;
+    private String budget;
     private int ratingGiven;
 
     public TripDTO() {}
@@ -32,4 +33,8 @@ public class TripDTO {
 
     public int getRatingGiven() { return ratingGiven; }
     public void setRatingGiven(int ratingGiven) { this.ratingGiven = ratingGiven; }
+
+    public String getTripBudget() { return budget; }
+    public void setTripBudget(String budget) {this.budget = budget; }
+
 }

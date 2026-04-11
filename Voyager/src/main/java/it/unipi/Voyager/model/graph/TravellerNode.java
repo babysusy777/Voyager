@@ -18,7 +18,7 @@ public class TravellerNode {
     private String gender;
 
     private String userSegment;
-
+    private String travelType;
 
     private Traveller.Preferences preferences;
 

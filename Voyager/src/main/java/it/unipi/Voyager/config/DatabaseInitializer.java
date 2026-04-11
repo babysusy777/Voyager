@@ -1,6 +1,7 @@
 package it.unipi.Voyager.config;
 
 import com.mongodb.client.MongoCollection;
+import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -19,6 +20,8 @@ public class DatabaseInitializer {
 
     @Autowired
     private MongoTemplate mongoTemplate;
+    @Autowired
+    private TravellerGraphRepository travellerNodeRepository;
 
     @EventListener(ApplicationReadyEvent.class)
     public void initializeHotelStats() {
@@ -338,5 +341,11 @@ public class DatabaseInitializer {
 
         travellers.aggregate(pipeline).toCollection();
         System.out.println("[Init] Step 4 completato.");
+    }
+    // Step 5: calcola travelType su tutti i nodi Traveller in Neo4j
+    private void populateTravelTypes() {
+        System.out.println("[Init] Step 5 — travelType sui nodi Traveller Neo4j...");
+        travellerNodeRepository.computeAndStoreTravelTypeAll();
+        System.out.println("[Init] Step 5 completato.");
     }
 }

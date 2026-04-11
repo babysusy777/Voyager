@@ -31,21 +31,21 @@ public class Traveller {
     @Field("past_trips")
     private List<Trip> trips;
 
+    @Field("travel_type")
+    private String travelType;
+
 
     public static class Preferences {
         private String budget;
 
-        @Field("travel_type")
-        private String travelType;
+        //@Field("travel_type")
+        //private String travelType;
 
         private String season;
 
         // Getters & Setters
         public String getBudget() { return budget; }
         public void setBudget(String budget) { this.budget = budget; }
-
-        public String getTravelType() { return travelType; }
-        public void setTravelType(String travelType) { this.travelType = travelType; }
 
         public String getSeason() { return season; }
         public void setSeason(String season) { this.season = season; }
@@ -110,6 +110,9 @@ public class Traveller {
 
     // ─── Getters & Setters (Traveler) ─────────────────────────
 
+    public String getTravelType() { return travelType; }
+    public void setTravelType(String travelType) { this.travelType = travelType; }
+    
     public ObjectId getId() { return id; }
     public void setId(ObjectId id) { this.id = id; }
 

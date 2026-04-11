@@ -19,8 +19,9 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
     @Query("MATCH (t1:Traveller {id: $travellerId}), (t2:Traveller) " +
             "WHERE t1 <> t2 " +
             "WITH t1, t2, " +
-            "    (CASE WHEN t1.preferred_season = t2.preferred_season THEN 1 ELSE 0 END + " +
-            "     CASE WHEN t1.budget_range = t2.budget_range THEN 1 ELSE 0 END + " +
+            "    (CASE WHEN t1.preferences.season = t2.preferences.season THEN 1 ELSE 0 END + " +
+            "     CASE WHEN t1.preferences.budget = t2.preferences.budget THEN 1 ELSE 0 END + " +
+            "     CASE WHEN t1.travelType = t2.traveltype AND t1.travelType IS NOT NULL THEN 1 ELSE 0 END + " +
             "     size(apoc.coll.intersection(t1.preferences, t2.preferences))) AS profileScore " +
             "OPTIONAL MATCH (t1)-[:MADE]->(:Trip)-[:IN_CITY]->(c:City)<-[:IN_CITY]-(:Trip)<-[:MADE]-(t2) " +
             "WITH t1, t2, profileScore, count(DISTINCT c) AS cityScore " +
@@ -60,6 +61,8 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
             "ORDER BY cityName, score DESC")
     List<AttractionDiscoveryDTO> findReturningTravelerTips(String email);
 
+    // Recommendations
+
     @Query("// 1. Identifica i tipi di attrazioni preferiti dall'utente (basato sui viaggi passati)" +
             "MATCH (me:Traveller {email: $email})-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:NEAR_TO]->(a:Attraction)" +
             "WITH me, collect(DISTINCT a.category) AS myPreferredCategories" +
@@ -93,4 +96,32 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
             "ORDER BY finalScore DESC" +
             "LIMIT 10")
     List<RecommendationDTO> getPersonalizedRecommendations(String email);
+    // Bulk — inizializzazione
+    @Query("""
+    MATCH (t:Traveller)
+    OPTIONAL MATCH (t)-[:MADE_TRIP]->()-[:STAYED_AT]->(h:Hotel)-[:NEAR_TO]->(a:Attraction)
+    WITH t, a.category AS category, COUNT(a) AS categoryCount
+    ORDER BY categoryCount DESC
+    WITH t, CASE
+        WHEN COUNT(category) = 0 THEN null
+        ELSE COLLECT(category)[0]
+    END AS dominantCategory
+    SET t.travelType = dominantCategory
+""")
+    void computeAndStoreTravelTypeAll();
+
+    // Singolo — dopo nuovo trip
+    @Query("""
+    MATCH (t:Traveller {email: $email})
+    OPTIONAL MATCH (t)-[:MADE_TRIP]->()-[:STAYED_AT]->(h:Hotel)-[:NEAR_TO]->(a:Attraction)
+    WITH t, a.category AS category, COUNT(a) AS categoryCount
+    ORDER BY categoryCount DESC
+    WITH t, CASE
+        WHEN COUNT(category) = 0 THEN null
+        ELSE COLLECT(category)[0]
+    END AS dominantCategory
+    SET t.travelType = dominantCategory
+    RETURN t.travelType
+""")
+    String computeAndStoreTravelType(String email);
 }
