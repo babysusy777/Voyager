@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/trips")
+@RequestMapping("/api/trips/traveller")
 public class TripController {
 
     @Autowired
@@ -23,11 +23,11 @@ public class TripController {
 
     @PostMapping("/upsert/{userId}")
     public ResponseEntity<String> upsertTrip(
-            @PathVariable String userId,
+            @PathVariable String email,
             @RequestBody TripDTO tripDto) {
 
         try {
-            travellerService.upsertTrip(userId, tripDto);
+            travellerService.upsertTrip(email, tripDto);
 
             return ResponseEntity.ok("Operazione completata: il viaggio '" +
                     tripDto.getTripName() + "' è stato sincronizzato correttamente.");

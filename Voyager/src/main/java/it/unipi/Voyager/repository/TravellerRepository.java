@@ -6,6 +6,7 @@ import it.unipi.Voyager.model.Traveller;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -84,6 +85,7 @@ public interface TravellerRepository extends MongoRepository<Traveller, ObjectId
                     "} }"
     })
     TravelHabitDTO getTravelHabits(ObjectId travellerId);
+
     @Aggregation(pipeline = {
             "{ $match: { _id: ?0 } }",
             "{ $project: { " +

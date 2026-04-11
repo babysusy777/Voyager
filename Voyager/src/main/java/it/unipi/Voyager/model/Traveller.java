@@ -33,7 +33,6 @@ public class Traveller {
 
 
     public static class Preferences {
-
         private String budget;
 
         @Field("travel_type")

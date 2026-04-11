@@ -6,7 +6,9 @@ import it.unipi.Voyager.dto.VisibilityGapDTO;
 import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.HotelRepository;
 import it.unipi.Voyager.service.HostService;
+import it.unipi.Voyager.service.graph.CityService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import it.unipi.Voyager.dto.HostHotelRequest;
@@ -15,10 +17,14 @@ import it.unipi.Voyager.model.Hotel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/hosts")
+@RequestMapping("/api/host")
 public class HostController {
+
+    @Autowired
+    private CityService cityService;
 
     @Autowired
     private HostRepository hostRepository;
@@ -153,6 +159,18 @@ public class HostController {
         List<SeasonalConcentrationDTO> result = hostService.getSeasonalConcentration(email);
         if (result == null || result.isEmpty()) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/analysis/similar-cities")
+    public ResponseEntity<?> getSimilarCities(@RequestParam String cityName) {
+        List<Map<String, Object>> similarCities = cityService.getSimilarCities(cityName);
+
+        if (similarCities.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Nessuna città simile trovata o città non esistente.");
+        }
+
+        return ResponseEntity.ok(similarCities);
     }
 
 }

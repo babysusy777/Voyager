@@ -5,12 +5,16 @@ import it.unipi.Voyager.dto.TravellerConfigRequest;
 import it.unipi.Voyager.dto.TripFrequencyDTO;
 import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.dto.TravellerSegmentDTO;
+import it.unipi.Voyager.model.graph.TravellerNode;
 import it.unipi.Voyager.repository.TravellerRepository;
 import it.unipi.Voyager.service.TravellerService;
+import it.unipi.Voyager.service.graph.RecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/traveller")
@@ -21,6 +25,9 @@ public class TravellerController {
 
     @Autowired
     private TravellerRepository travellerRepository;
+
+    @Autowired
+    private RecommendationService recommendationService;
 
     @PostMapping("/configure")
     public ResponseEntity<?> saveTravellerConfiguration(@RequestBody TravellerConfigRequest request) {
@@ -66,6 +73,7 @@ public class TravellerController {
             return ResponseEntity.notFound().build();
         }
     }
+
     @GetMapping("/frequency-analysis")
     public ResponseEntity<?> getChurnAnalysis(@RequestParam String email) {
         try {
@@ -77,5 +85,18 @@ public class TravellerController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * Restituisce la lista dei viaggiatori più simili all'utente loggato.
+     */
+    @GetMapping("/similar-friends")
+    public ResponseEntity<List<TravellerNode>> getSimilarTravellers(java.security.Principal principal) {
+        List<TravellerNode> similarOnes = recommendationService.getSuggestions(principal.getName());
+
+        if (similarOnes.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(similarOnes);
     }
 }

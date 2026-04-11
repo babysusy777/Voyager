@@ -26,6 +26,9 @@ public class TravellerService {
     @Autowired
     private TravellerRepository travellerRepository;
 
+    @Autowired
+    private HotelService hotelService;
+
      // Se il viaggio con lo stesso nome esiste, lo aggiorna.
      // Se non esiste, lo aggiunge alla lista past_trips.
      public TravelHabitDTO getTravelHabitsByEmail(String email) {
@@ -36,6 +39,7 @@ public class TravellerService {
          // 2. Chiamiamo la query di aggregazione usando l'ID dell'utente trovato
          return travellerRepository.getTravelHabits(traveller.getId());
      }
+
     public TripFrequencyDTO getTripFrequencyByEmail(String email) {
         // 1. Recupero l'utente tramite email [cite: 89, 255]
         Traveller traveller = travellerRepository.findByEmail(email)
@@ -49,30 +53,50 @@ public class TravellerService {
         // 3. Esecuzione della query di aggregazione sull'ID dell'utente trovato [cite: 291]
         return travellerRepository.getTripFrequency(traveller.getId());
     }
-    public void upsertTrip(String userId, TripDTO tripDto) {
-        // Trasformiamo il DTO in un Document (usando il converter di Spring per fare prima)
+
+    public void upsertTrip(String email, TripDTO tripDto) {
         Document tripDoc = new Document();
         mongoTemplate.getConverter().write(tripDto, tripDoc);
 
-        // Query: { "userId": "...", "trips.trip_name": "..." }
-        Document query = new Document("userId", userId)
-                .append("trips.trip_name", tripDto.getTripName());
+        // Usa email come chiave di ricerca
+        Document query = new Document("email", email)
+                .append("past_trips.trip_name", tripDto.getTripName());
 
-        // Update: { "$set": { "trips.$.city": "...", ... } }
-        Document updateFields = new Document("trips.$.city", tripDto.getCity())
-                .append("trips.$.hotel", tripDoc.get("hotels")) // hotels è già un Document/List
-                .append("trips.$.season", tripDto.getSeason())
-                .append("trips.$.date", tripDto.getDate())
-                .append("trips.$.rating_given", tripDto.getRatingGiven());
+        Document updateFields = new Document("past_trips.$.city", tripDto.getCity())
+                .append("past_trips.$.hotel_name", tripDoc.get("hotels"))
+                .append("past_trips.$.season", tripDto.getSeason())
+                .append("past_trips.$.date", tripDto.getDate())
+                .append("past_trips.$.rating_given", tripDto.getRatingGiven());
 
         UpdateResult result = mongoTemplate.getCollection("travellers")
                 .updateOne(query, new Document("$set", updateFields));
 
         if (result.getMatchedCount() == 0) {
-            // Se non esiste, facciamo il $push
+            // Trip non esiste → push
             mongoTemplate.getCollection("travellers").updateOne(
-                    new Document("userId", userId),
-                    new Document("$push", new Document("trips", tripDoc))
+                    new Document("email", email),
+                    new Document("$push", new Document("past_trips", tripDoc))
+            );
+        }
+
+        // Writeback hotel stats
+        if (tripDto.getHotels() != null) {
+            for (Traveller.Trip.HotelSummary hotel : tripDto.getHotels()) {
+                hotelService.updateHotelStatsOnNewTrip(
+                        hotel.getHotelName(),
+                        tripDto.getSeason(),
+                        traveller.getUserSegment(),  // recuperato prima con findByEmail
+                        tripDto.getTripBudget()      // se presente nel DTO
+                );
+            }
+        }
+
+        // Ricalcola e aggiorna user_segment del traveller
+        TravellerSegmentDTO newSegment = travellerRepository.computeSegment(email);
+        if (newSegment != null) {
+            mongoTemplate.getCollection("travellers").updateOne(
+                    new Document("email", email),
+                    new Document("$set", new Document("user_segment", newSegment.getSegment()))
             );
         }
     }
@@ -160,6 +184,11 @@ public class TravellerService {
     }
 
     public TravellerSegmentDTO getTravellerSegment(String email) {
-        return travellerRepository.computeSegment(email);
+        Traveller traveller = travellerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Traveller non trovato"));
+
+        TravellerSegmentDTO dto = new TravellerSegmentDTO();
+        dto.setSegment(traveller.getUserSegment());
+        return dto;
     }
 }

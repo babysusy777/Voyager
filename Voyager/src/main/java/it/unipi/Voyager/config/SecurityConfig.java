@@ -1,7 +1,7 @@
 package it.unipi.Voyager.config;
 
 
-import it.unipi.Voyager.model.Traveller;
+import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.TravellerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -14,11 +14,18 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
-    //Bean per l'hashing sicuro delle password
+
+    @Autowired
+    private TravellerRepository travellerRepository;
+
+    @Autowired
+    private HostRepository hostRepository;
+
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -34,8 +41,8 @@ public class SecurityConfig {
                                 "/api/auth/**"
                         ).permitAll()
 
-                        .requestMatchers("/host/**").hasAuthority("HOST")
-                        .requestMatchers("/traveller/**").hasAuthority("TRAVELLER")
+                        .requestMatchers("/api/**/host/**").hasAuthority("HOST")
+                        .requestMatchers("/api/**/traveller/**").hasAuthority("TRAVELLER")
 
                         .anyRequest().authenticated()
                 )
@@ -43,22 +50,31 @@ public class SecurityConfig {
 
         return http.build();
     }
-    @Autowired
-    private TravellerRepository travellerRepository;
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return email-> {
-            // Spring Security cerca l'utente nel tuo MongoDB usando il repository
-            it.unipi.Voyager.model.Traveller user = travellerRepository.findByEmail(email)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+        return email -> {
+            if (email.endsWith("@voyager.com")) {
+                // Se l'email è del dominio voyager.com, cerchiamo solo tra gli HOST
+                var host = hostRepository.findByEmail(email)
+                        .orElseThrow(() -> new UsernameNotFoundException("Host non trovato con email: " + email));
+                return org.springframework.security.core.userdetails.User.builder()
+                        .username(host.getEmail())
+                        .password(host.getPassword())
+                        .authorities(host.getRole().name()) // Restituisce "HOST"
+                        .build();
+            } else {
+                // Altrimenti, cerchiamo tra i TRAVELLER
+                var traveller = travellerRepository.findByEmail(email)
+                        .orElseThrow(() -> new UsernameNotFoundException("Viaggiatore non trovato con email: " + email));
 
-            return org.springframework.security.core.userdetails.User.builder()
-                    .password(user.getPassword()) // La password hashata nel DB
-                    .authorities(user.getRole().name()) // Es: "TRAVELLLER"
-                    .build();
+                return org.springframework.security.core.userdetails.User.builder()
+                        .username(traveller.getEmail())
+                        .password(traveller.getPassword())
+                        .authorities(traveller.getRole().name()) // Restituisce "TRAVELLER"
+                        .build();
+            }
+
         };
     }
-
-
 }

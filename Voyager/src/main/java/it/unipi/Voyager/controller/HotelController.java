@@ -19,13 +19,13 @@ public class HotelController {
     private HotelRepository hotelRepository;
 
     // Per la versione con campo precalcolato
-    @PostMapping("/refresh-averages")
+    @PostMapping("/host/refresh-averages")
     public ResponseEntity<String> refreshCityCategoryAverages(
             @RequestParam String city,
             @RequestParam String rating) {
 
         try {
-            // Chiamata al metodo Plain Language nel Service
+
             hotelService.updateCityCategoryAvgVisits(city, rating);
 
             return ResponseEntity.ok("Aggiornamento completato con successo per " + city + " (" + rating + ").");
@@ -43,7 +43,7 @@ public class HotelController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/facilities-gap")
+    @GetMapping("/host/facilities-gap")
     public ResponseEntity<FacilitiesGapDTO> getFacilitiesGap(@RequestParam String hotelName, @RequestParam String cityName) {
         FacilitiesGapDTO result = hotelService.getFacilitiesGap(hotelName, cityName);
         if (result == null) return ResponseEntity.notFound().build();

@@ -76,4 +76,142 @@ public class HotelService {
 
         return index;
     }
+
+    public void updateHotelStatsOnNewTrip(String hotelName, String season, String userSegment, String tripBudget) {
+
+        // Step 1: incrementa totalVisits e counts stagionali
+        String seasonField = "guestStats.seasonality.counts." + season;
+        mongoTemplate.getCollection("hotels").updateOne(
+                new Document("HotelName", hotelName),
+                new Document("$inc", new Document("guestStats.totalVisits", 1)
+                        .append(seasonField, 1))
+        );
+
+        // Step 2: recupera city e rating per ricalcolare city_category_avg
+        Document hotel = mongoTemplate.getCollection("hotels")
+                .find(new Document("HotelName", hotelName))
+                .projection(new Document("cityName", 1).append("HotelRating", 1))
+                .first();
+
+        if (hotel == null) return;
+        updateCityCategoryAvgVisits(hotel.getString("cityName"), hotel.getString("HotelRating"));
+
+        // Step 3: ricalcola segment_distribution e preference_distribution
+        updateDistributions(hotelName);
+    }
+
+    private void updateDistributions(String hotelName) {
+        List<Document> pipeline = Arrays.asList(
+
+                new Document("$unwind", "$past_trips"),
+
+                new Document("$match", new Document("past_trips.hotel_name", hotelName)),
+
+                new Document("$group", new Document("_id", null)
+                        .append("total", new Document("$sum", 1))
+                        .append("explorer",       new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$user_segment", "explorer")), 1, 0))))
+                        .append("comfort_seeker", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$user_segment", "comfort-seeker")), 1, 0))))
+                        .append("upgrader",       new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$user_segment", "upgrader")), 1, 0))))
+                        .append("budget_hunter",  new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$user_segment", "budget-hunter")), 1, 0))))
+                        .append("budget_low",    new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.trip_budget", "low")), 1, 0))))
+                        .append("budget_medium", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.trip_budget", "medium")), 1, 0))))
+                        .append("budget_high",   new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.trip_budget", "high")), 1, 0))))
+                        .append("season_spring", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.season", "spring")), 1, 0))))
+                        .append("season_summer", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.season", "summer")), 1, 0))))
+                        .append("season_autumn", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.season", "autumn")), 1, 0))))
+                        .append("season_winter", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.season", "winter")), 1, 0))))
+                ),
+
+                // Costruisce le distribuzioni con proporzioni e dominant
+                new Document("$project", new Document("_id", 0)
+                        .append("segment_distribution", new Document()
+                                .append("explorer",       new Document("$divide", Arrays.asList("$explorer",       "$total")))
+                                .append("comfort-seeker", new Document("$divide", Arrays.asList("$comfort_seeker", "$total")))
+                                .append("upgrader",       new Document("$divide", Arrays.asList("$upgrader",       "$total")))
+                                .append("budget-hunter",  new Document("$divide", Arrays.asList("$budget_hunter",  "$total")))
+                                .append("dominant_segment", new Document("$switch", new Document("branches", Arrays.asList(
+                                        new Document("case", new Document("$and", Arrays.asList(
+                                                new Document("$gte", Arrays.asList("$explorer", "$comfort_seeker")),
+                                                new Document("$gte", Arrays.asList("$explorer", "$upgrader")),
+                                                new Document("$gte", Arrays.asList("$explorer", "$budget_hunter"))
+                                        ))).append("then", "explorer"),
+                                        new Document("case", new Document("$and", Arrays.asList(
+                                                new Document("$gte", Arrays.asList("$comfort_seeker", "$explorer")),
+                                                new Document("$gte", Arrays.asList("$comfort_seeker", "$upgrader")),
+                                                new Document("$gte", Arrays.asList("$comfort_seeker", "$budget_hunter"))
+                                        ))).append("then", "comfort-seeker"),
+                                        new Document("case", new Document("$and", Arrays.asList(
+                                                new Document("$gte", Arrays.asList("$upgrader", "$explorer")),
+                                                new Document("$gte", Arrays.asList("$upgrader", "$comfort_seeker")),
+                                                new Document("$gte", Arrays.asList("$upgrader", "$budget_hunter"))
+                                        ))).append("then", "upgrader")
+                                )).append("default", "budget-hunter")))
+                        )
+                        .append("preference_distribution", new Document()
+                                .append("budget", new Document()
+                                        .append("low",    new Document("$divide", Arrays.asList("$budget_low",    "$total")))
+                                        .append("medium", new Document("$divide", Arrays.asList("$budget_medium", "$total")))
+                                        .append("high",   new Document("$divide", Arrays.asList("$budget_high",   "$total")))
+                                        .append("dominant", new Document("$switch", new Document("branches", Arrays.asList(
+                                                new Document("case", new Document("$and", Arrays.asList(
+                                                        new Document("$gte", Arrays.asList("$budget_low", "$budget_medium")),
+                                                        new Document("$gte", Arrays.asList("$budget_low", "$budget_high"))
+                                                ))).append("then", "low"),
+                                                new Document("case", new Document("$and", Arrays.asList(
+                                                        new Document("$gte", Arrays.asList("$budget_medium", "$budget_low")),
+                                                        new Document("$gte", Arrays.asList("$budget_medium", "$budget_high"))
+                                                ))).append("then", "medium")
+                                        )).append("default", "high")))
+                                )
+                                .append("preferred_season", new Document()
+                                        .append("spring", new Document("$divide", Arrays.asList("$season_spring", "$total")))
+                                        .append("summer", new Document("$divide", Arrays.asList("$season_summer", "$total")))
+                                        .append("autumn", new Document("$divide", Arrays.asList("$season_autumn", "$total")))
+                                        .append("winter", new Document("$divide", Arrays.asList("$season_winter", "$total")))
+                                        .append("dominant", new Document("$switch", new Document("branches", Arrays.asList(
+                                                new Document("case", new Document("$and", Arrays.asList(
+                                                        new Document("$gte", Arrays.asList("$season_spring", "$season_summer")),
+                                                        new Document("$gte", Arrays.asList("$season_spring", "$season_autumn")),
+                                                        new Document("$gte", Arrays.asList("$season_spring", "$season_winter"))
+                                                ))).append("then", "spring"),
+                                                new Document("case", new Document("$and", Arrays.asList(
+                                                        new Document("$gte", Arrays.asList("$season_summer", "$season_spring")),
+                                                        new Document("$gte", Arrays.asList("$season_summer", "$season_autumn")),
+                                                        new Document("$gte", Arrays.asList("$season_summer", "$season_winter"))
+                                                ))).append("then", "summer"),
+                                                new Document("case", new Document("$and", Arrays.asList(
+                                                        new Document("$gte", Arrays.asList("$season_autumn", "$season_spring")),
+                                                        new Document("$gte", Arrays.asList("$season_autumn", "$season_summer")),
+                                                        new Document("$gte", Arrays.asList("$season_autumn", "$season_winter"))
+                                                ))).append("then", "autumn")
+                                        )).append("default", "winter")))
+                                )
+                        )
+                )
+        );
+
+        Document result = mongoTemplate.getCollection("travellers")
+                .aggregate(pipeline).first();
+
+        if (result == null) return;
+
+        mongoTemplate.getCollection("hotels").updateOne(
+                new Document("HotelName", hotelName),
+                new Document("$set", new Document()
+                        .append("guestStats.segment_distribution",    result.get("segment_distribution"))
+                        .append("guestStats.preference_distribution", result.get("preference_distribution"))
+                )
+        );
+    }
 }
