@@ -75,17 +75,17 @@ public class Traveller {
             @Field("hotel_name")
             private String hotelName;
 
-            private String stars;
+            private String hotelStars;
 
             public HotelSummary(String name, String stars) {
                 this.hotelName = name;
-                this.stars = stars;
+                this.hotelStars = stars;
             }
             public String getHotelName() { return hotelName; }
             public void setHotelName(String hotelName) { this.hotelName = hotelName; }
 
-            public String getHotelStars() { return stars; }
-            public void setHotelStars(String stars) { this.stars = stars; }
+            public String getHotelStars() { return hotelStars; }
+            public void setHotelStars(String hotelSstars) { this.hotelStars = hotelStars; }
         }
 
         // Getters & Setters

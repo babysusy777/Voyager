@@ -1,16 +1,19 @@
 package it.unipi.Voyager.dto;
 
 import it.unipi.Voyager.model.Traveller;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.List;
 
 public class TripDTO {
+    @Field("trip_name")
     private String tripName;
     private List<String> city;
     private List<Traveller.Trip.HotelSummary> hotels;
     private String season;
     private String date;
     private String budget;
+    @Field("rating_given")
     private int ratingGiven;
 
     public TripDTO() {}
@@ -34,7 +37,7 @@ public class TripDTO {
     public int getRatingGiven() { return ratingGiven; }
     public void setRatingGiven(int ratingGiven) { this.ratingGiven = ratingGiven; }
 
-    public String getTripBudget() { return budget; }
-    public void setTripBudget(String budget) {this.budget = budget; }
+    public String getBudget() { return budget; }
+    public void setBudget(String budget) {this.budget = budget; }
 
 }

@@ -47,7 +47,8 @@ public class TravellerService {
      }
 
     public TripFrequencyDTO getTripFrequencyByEmail(String email) {
-        // 1. Recupero l'utente tramite email [cite: 89, 255]
+        // 1. Recupero l'utente tramite email
+
         Traveller traveller = travellerRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
 
@@ -61,20 +62,29 @@ public class TravellerService {
     }
 
     public void upsertTrip(String email, TripDTO tripDto) {
-        Document tripDoc = new Document();
-        mongoTemplate.getConverter().write(tripDto, tripDoc);
+        //Document tripDoc = new Document();
+        //mongoTemplate.getConverter().write(tripDto, tripDoc);
 
         Traveller traveller = travellerRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
+
+        List<Document> hotelDocs = new ArrayList<>();
+        if (tripDto.getHotels() != null) {
+            for (Traveller.Trip.HotelSummary h : tripDto.getHotels()) {
+                hotelDocs.add(new Document("hotelName", h.getHotelName())
+                        .append("hotelStars", h.getHotelStars()));
+            }
+        }
 
         // Usa email come chiave di ricerca
         Document query = new Document("email", email)
                 .append("past_trips.trip_name", tripDto.getTripName());
 
         Document updateFields = new Document("past_trips.$.city", tripDto.getCity())
-                .append("past_trips.$.hotel_name", tripDoc.get("hotels"))
+                .append("past_trips.$.hotels", hotelDocs)
                 .append("past_trips.$.season", tripDto.getSeason())
                 .append("past_trips.$.date", tripDto.getDate())
+                .append("past_trips.$.budget", tripDto.getBudget())
                 .append("past_trips.$.rating_given", tripDto.getRatingGiven());
 
         UpdateResult result = mongoTemplate.getCollection("travellers")
@@ -82,9 +92,17 @@ public class TravellerService {
 
         if (result.getMatchedCount() == 0) {
             // Trip non esiste → push
+            Document newTrip = new Document("trip_name", tripDto.getTripName())
+                .append("city", tripDto.getCity())
+                .append("hotels", hotelDocs)
+                .append("season", tripDto.getSeason())
+                .append("date", tripDto.getDate())
+                .append("rating_given", tripDto.getRatingGiven());
+
+
             mongoTemplate.getCollection("travellers").updateOne(
                     new Document("email", email),
-                    new Document("$push", new Document("past_trips", tripDoc))
+                    new Document("$push", new Document("past_trips", newTrip))
             );
         }
 
@@ -95,7 +113,7 @@ public class TravellerService {
                         hotel.getHotelName(),
                         tripDto.getSeason(),
                         traveller.getUserSegment(),  // recuperato prima con findByEmail
-                        tripDto.getTripBudget()      // se presente nel DTO
+                        tripDto.getBudget()      // se presente nel DTO
                 );
             }
         }
@@ -130,24 +148,32 @@ public class TravellerService {
 
     public String getTravelerStarTrend(String email) {
         List<Document> pipeline = Arrays.asList(
-
                 new Document("$match", new Document("email", email)),
-
                 new Document("$unwind", "$past_trips"),
-
-                // hotel_stars è già un intero sul trip — nessun $switch necessario
+                // Prendiamo il primo hotel di ogni viaggio (assumendo ce ne sia uno principale)
+                // e convertiamo la stringa "threeStar" in numero
                 new Document("$project", new Document("tripDate", "$past_trips.date")
-                        .append("starValue", "$past_trips.hotel_stars")),
+                        .append("starValue", new Document("$switch", new Document("branches", Arrays.asList(
+                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "oneStar"))).append("then", 1),
+                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "twoStar"))).append("then", 2),
+                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "threeStar"))).append("then", 3),
+                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "fourStar"))).append("then", 4),
+                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "fiveStar"))).append("then", 5)
+                        )).append("default", 0)))),
 
+                new Document("$match", new Document("starValue", new Document("$gt", 0))), // Escludi i viaggi senza hotel
                 new Document("$sort", new Document("tripDate", 1)),
-
                 new Document("$group", new Document("_id", "$_id")
                         .append("starHistory", new Document("$push", "$starValue")))
         );
 
         Document res = mongoTemplate.getCollection("travellers").aggregate(pipeline).first();
 
-        return (res != null) ? analyzeTrend(res.getList("starHistory", Integer.class)) : "DATI INSUFFICIENTI";
+        if (res == null || res.getList("starHistory", Integer.class) == null) {
+            return "DATI INSUFFICIENTI";
+        }
+
+        return analyzeTrend(res.getList("starHistory", Integer.class));
     }
 
     private String analyzeTrend(List<Integer> stars) {

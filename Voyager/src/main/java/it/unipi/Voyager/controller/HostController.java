@@ -77,11 +77,11 @@ public class HostController {
     private int parseStars(String hotelRating) {
         if (hotelRating == null) return 0;
         return switch (hotelRating.toLowerCase()) {
-            case "onestar"   -> 1;
-            case "twostar"   -> 2;
-            case "threestar" -> 3;
-            case "fourstar"  -> 4;
-            case "fivestar"  -> 5;
+            case "oneStar"   -> 1;
+            case "twoStar"   -> 2;
+            case "threeStar" -> 3;
+            case "fourStar"  -> 4;
+            case "fiveStar"  -> 5;
             default          -> 0;
         };
     }
