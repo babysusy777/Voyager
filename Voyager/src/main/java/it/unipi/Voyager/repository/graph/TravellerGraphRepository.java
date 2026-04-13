@@ -96,6 +96,7 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
             "ORDER BY finalScore DESC" +
             "LIMIT 10")
     List<RecommendationDTO> getPersonalizedRecommendations(String email);
+
     // Bulk — inizializzazione
     @Query("""
     MATCH (t:Traveller)

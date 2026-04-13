@@ -9,7 +9,6 @@ public class TravellerConfigRequest {
 
     // Preferences
     private String budget;
-    private String travelType;
     private String season;
 
     // Getters & Setters
@@ -27,9 +26,6 @@ public class TravellerConfigRequest {
 
     public String getBudget() { return budget; }
     public void setBudget(String budget) { this.budget = budget; }
-
-    public String getTravelType() { return travelType; }
-    public void setTravelType(String travelType) { this.travelType = travelType; }
 
     public String getSeason() { return season; }
     public void setSeason(String season) { this.season = season; }

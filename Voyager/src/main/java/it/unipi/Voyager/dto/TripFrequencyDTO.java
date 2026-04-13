@@ -6,6 +6,8 @@ public class TripFrequencyDTO {
     private Double churnScore;      // Rapporto di velocità (Score > 1 indica rallentamento)
     private String status;           // "at_risk", "slowing", o "active"
 
+    public TripFrequencyDTO() {}
+
     // Getter e Setter
     public Double getAvgGapDays() { return avgGapDays; }
     public void setAvgGapDays(Double avgGapDays) { this.avgGapDays = avgGapDays; }

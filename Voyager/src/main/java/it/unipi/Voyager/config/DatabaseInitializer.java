@@ -2,6 +2,7 @@ package it.unipi.Voyager.config;
 
 import com.mongodb.client.MongoCollection;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
+import it.unipi.Voyager.config.Neo4jSyncService;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -20,6 +21,9 @@ public class DatabaseInitializer {
 
     @Autowired
     private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private Neo4jSyncService neo4jSyncService;
 
     @Autowired
     private TravellerGraphRepository travellerNodeRepository;
@@ -337,6 +341,7 @@ public class DatabaseInitializer {
 
     private void populateTravelTypes() {
         System.out.println("[Init] Step 5 — travelType sui nodi Traveller Neo4j...");
+        neo4jSyncService.syncAll();
         travellerNodeRepository.computeAndStoreTravelTypeAll();
         System.out.println("[Init] Step 5 completato.");
     }

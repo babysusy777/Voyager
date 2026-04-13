@@ -1,9 +1,6 @@
 package it.unipi.Voyager.service;
 
-import it.unipi.Voyager.dto.TravelHabitDTO;
-import it.unipi.Voyager.dto.TravellerSegmentDTO;
-import it.unipi.Voyager.dto.TripDTO;
-import it.unipi.Voyager.dto.TripFrequencyDTO;
+import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.repository.TravellerRepository;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
@@ -12,7 +9,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.bson.Document;
 import com.mongodb.client.result.UpdateResult;
 import org.springframework.stereotype.Service;
-
+import it.unipi.Voyager.config.Neo4jSyncService;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,6 +22,9 @@ public class TravellerService {
     private MongoTemplate mongoTemplate;
 
     @Autowired
+    private Neo4jSyncService neo4jSyncService;
+
+    @Autowired
     private TravellerRepository travellerRepository;
 
     @Autowired
@@ -33,6 +33,23 @@ public class TravellerService {
     @Autowired
     private TravellerGraphRepository travellerNodeRepository;
 
+    public Traveller setPreferences(TravellerConfigRequest request) {
+        Traveller traveller = travellerRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        traveller.setGender(request.getGender());
+        traveller.setAge(request.getAge());
+        traveller.setCountry(request.getCountry());
+
+        Traveller.Preferences preferences = new Traveller.Preferences();
+        preferences.setBudget(request.getBudget());
+        preferences.setSeason(request.getSeason());
+        traveller.setPreferences(preferences);
+
+        Traveller saved = travellerRepository.save(traveller);
+        neo4jSyncService.syncTravellerByEmail(request.getEmail());
+        return saved;
+    }
 
      // Se il viaggio con lo stesso nome esiste, lo aggiorna.
      // Se non esiste, lo aggiunge alla lista past_trips.
@@ -58,7 +75,7 @@ public class TravellerService {
         }
 
         // 3. Esecuzione della query di aggregazione sull'ID dell'utente trovato [cite: 291]
-        return travellerRepository.getTripFrequency(traveller.getId());
+        return travellerRepository.getTripFrequency(traveller.getEmail());
     }
 
     public void upsertTrip(String email, TripDTO tripDto) {
@@ -128,6 +145,9 @@ public class TravellerService {
         }
         // Ricalcola travelType sul nodo Neo4j dopo un nuovo trip
         travellerNodeRepository.computeAndStoreTravelType(email);
+
+        // Sync Neo4j dopo update
+        neo4jSyncService.syncTravellerByEmail(email);
     }
 
     public List<Traveller.Trip> getTripsSortedByDate(String email) {

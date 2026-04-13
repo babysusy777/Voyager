@@ -1,5 +1,6 @@
 package it.unipi.Voyager.controller;
 
+import it.unipi.Voyager.config.Neo4jSyncService;
 import it.unipi.Voyager.dto.HostHotelUpdateRequest;
 import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
 import it.unipi.Voyager.dto.VisibilityGapDTO;
@@ -35,6 +36,9 @@ public class HostController {
     @Autowired
     private HostService hostService;
 
+    @Autowired
+    private Neo4jSyncService neo4jSyncService;
+
     @PostMapping("/add-hotel")
     public ResponseEntity<?> addHotel(@RequestBody HostHotelRequest request) {
         try {
@@ -54,6 +58,7 @@ public class HostController {
             // guestStats lasciato null: nessuna visita ancora
 
             Hotel savedHotel = hotelRepository.save(hotel);
+            neo4jSyncService.syncHotelByName(savedHotel.getHotelName(), savedHotel.getCityName());
 
             // 3. Costruisci la HotelReference (partial embedding nell'host)
             Host.HotelReference ref = new Host.HotelReference();
@@ -119,6 +124,7 @@ public class HostController {
             }
 
             hotelRepository.save(hotel);
+            neo4jSyncService.syncHotelByName(hotel.getHotelName(), hotel.getCityName());
 
             return ResponseEntity.ok("Hotel updated successfully");
 

@@ -3,6 +3,8 @@ package it.unipi.Voyager.config;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unipi.Voyager.model.UserRole;
+import it.unipi.Voyager.model.graph.TravellerNode;
+import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

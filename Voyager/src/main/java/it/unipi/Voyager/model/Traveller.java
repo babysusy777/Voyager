@@ -22,7 +22,6 @@ public class Traveller {
     private String email;
     private int age;
     private String userSegment;
-    private String budget;
     private String country;
     private String password;
     private Preferences preferences;
@@ -62,8 +61,8 @@ public class Traveller {
 
         private List<String> city; // partial embedding + linking, ci serve solo il nome
 
-        @Field("hotel_name")
-        private List<HotelSummary> hotel; // solo nome, no embedding o linking
+        @Field("hotels")
+        private List<HotelSummary> hotels; // solo nome, no embedding o linking
 
         private String season;
         private String date;
@@ -72,10 +71,13 @@ public class Traveller {
         private int ratingGiven;
 
         public static class HotelSummary {
-            @Field("hotel_name")
+            @Field("hotelName")
             private String hotelName;
 
+            @Field("hotelStars")
             private String hotelStars;
+
+            public HotelSummary() {}
 
             public HotelSummary(String name, String stars) {
                 this.hotelName = name;
@@ -85,7 +87,7 @@ public class Traveller {
             public void setHotelName(String hotelName) { this.hotelName = hotelName; }
 
             public String getHotelStars() { return hotelStars; }
-            public void setHotelStars(String hotelSstars) { this.hotelStars = hotelStars; }
+            public void setHotelStars(String hotelStars) { this.hotelStars = hotelStars; }
         }
 
         // Getters & Setters
@@ -95,8 +97,8 @@ public class Traveller {
         public List<String> getCity() { return city; }
         public void setCity(List<String> city) { this.city = city; }
 
-        public List<HotelSummary> getHotels() { return hotel; }
-        public void setHotels(List<HotelSummary> hotel) { this.hotel = hotel; }
+        public List<HotelSummary> getHotels() { return hotels; }
+        public void setHotels(List<HotelSummary> hotels) { this.hotels = hotels; }
 
         public String getSeason() { return season; }
         public void setSeason(String season) { this.season = season; }
@@ -142,9 +144,6 @@ public class Traveller {
 
     public String getUserSegment() { return userSegment; }
     public void setUserSegment(String userSegment) { this.userSegment = userSegment; }
-
-    public String getBudget() { return budget; }
-    public void setBudget(String budget) { this.budget = budget; }
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }

@@ -32,25 +32,8 @@ public class TravellerController {
     @PostMapping("/configure")
     public ResponseEntity<?> saveTravellerConfiguration(@RequestBody TravellerConfigRequest request) {
         try {
-            Traveller traveller = travellerRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User does not exist"));
-
-            // Personal info
-            traveller.setCountry(request.getCountry());
-            traveller.setGender(request.getGender());
-            traveller.setAge(request.getAge());
-            traveller.setTravelType(request.getTravelType());
-
-            // Preferences
-            Traveller.Preferences prefs = new Traveller.Preferences();
-            prefs.setBudget(request.getBudget());
-            prefs.setSeason(request.getSeason());
-            traveller.setPreferences(prefs);
-
-            travellerRepository.save(traveller);
-
-            return ResponseEntity.ok("Configuration saved successfully");
-
+            Traveller traveller = travellerService.setPreferences(request);
+            return ResponseEntity.ok(traveller);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

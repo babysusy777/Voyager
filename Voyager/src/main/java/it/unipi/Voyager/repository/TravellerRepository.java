@@ -62,7 +62,6 @@ public interface TravellerRepository extends MongoRepository<Traveller, ObjectId
                     "_id: { userId: '$_id', season: '$past_trips.season' }, " +
                     "seasonCount: { $sum: 1 }, " +
                     "ratings: { $push: '$past_trips.rating_given' }, " +
-                    "countries: { $addToSet: '$past_trips.country' }, " +
                     "cities: { $addToSet: '$past_trips.city' } " +
                     "} }",
             "{ $sort: { 'seasonCount': -1 } }",
@@ -72,7 +71,6 @@ public interface TravellerRepository extends MongoRepository<Traveller, ObjectId
                     "mostFrequentSeason: { $first: '$_id.season' }, " +
                     "totalTrips: { $sum: '$seasonCount' }, " +
                     "allRatings: { $push: '$ratings' }, " +
-                    "allCountries: { $push: '$countries' }, " +
                     "allCities: { $push: '$cities' } " +
                     "} }",
             // Step 3: Pulizia finale e calcolo medie/dimensioni
@@ -80,45 +78,61 @@ public interface TravellerRepository extends MongoRepository<Traveller, ObjectId
                     "mostFrequentSeason: 1, " +
                     "totalTrips: 1, " +
                     "avgRating: { $avg: { $reduce: { input: '$allRatings', initialValue: [], in: { $concatArrays: ['$$value', '$$this'] } } } }, " +
-                    "countCountries: { $size: { $reduce: { input: '$allCountries', initialValue: [], in: { $setUnion: ['$$value', '$$this'] } } } }, " +
                     "countCities: { $size: { $reduce: { input: '$allCities', initialValue: [], in: { $setUnion: ['$$value', '$$this'] } } } } " +
                     "} }"
     })
     TravelHabitDTO getTravelHabits(ObjectId travellerId);
 
     @Aggregation(pipeline = {
-            "{ $match: { _id: ?0 } }",
-            "{ $project: { " +
-                    "sorted_trips: { $sortArray: { input: '$past_trips', sortBy: { date: 1 } } } " +
-                    "} }",
-            "{ $project: { " +
-                    "last_trip_date: { $last: '$sorted_trips.date' }, " +
-                    "gaps: { $map: { " +
-                    "input: { $range: [1, { $size: '$sorted_trips' }] }, " +
-                    "as: 'i', " +
-                    "in: { $subtract: [ " +
-                    "{ $arrayElemAt: ['$sorted_trips.date', '$$i'] }, " +
-                    "{ $arrayElemAt: ['$sorted_trips.date', { $subtract: ['$$i', 1] }] } " +
-                    "] } " +
+            // 1. Filtra per email
+            "{ $match: { email: ?0 } }",
+
+            // 2. Crea l'array di date (usiamo $addFields per mantenere il resto del documento)
+            "{ $addFields: { " +
+                    "dates: { $map: { " +
+                    "input: { $sortArray: { input: { $ifNull: ['$past_trips', []] }, sortBy: { date: 1 } } }, " +
+                    "as: 't', " +
+                    "in: { $dateFromString: { dateString: '$$t.date' } } " +
                     "} } " +
                     "} }",
-            "{ $project: { " +
-                    "avg_gap_days: { $divide: [{ $avg: '$gaps' }, 86400000] }, " +
-                    "days_since_last: { $divide: [ " +
-                    "{ $subtract: [new Date(), '$last_trip_date'] }, 86400000 " +
+
+            // 3. Calcola i gap (con controllo di sicurezza sull'array)
+            "{ $addFields: { " +
+                    "last_trip_date: { $last: '$dates' }, " +
+                    "gaps: { $cond: [ " +
+                    "{ $gt: [{ $size: { $ifNull: ['$dates', []] } }, 1] }, " + // Se ci sono almeno 2 date
+                    "{ $map: { " +
+                    "input: { $range: [1, { $size: '$dates' }] }, " +
+                    "as: 'i', " +
+                    "in: { $subtract: [ " +
+                    "{ $arrayElemAt: ['$dates', '$$i'] }, " +
+                    "{ $arrayElemAt: ['$dates', { $subtract: ['$$i', 1] }] } " +
+                    "] } " +
+                    "} }, " +
+                    "[] " + // Altrimenti array vuoto
                     "] } " +
                     "} }",
+
+            // 4. Medie
+            "{ $addFields: { " +
+                    "avg_gap_days: { $cond: [ { $gt: [{ $size: '$gaps' }, 0] }, { $divide: [{ $avg: '$gaps' }, 86400000] }, 0] }, " +
+                    "days_since_last: { $divide: [{ $subtract: [new Date(), '$last_trip_date'] }, 86400000] } " +
+                    "} }",
+
+            // 5. Mapping finale verso il DTO
             "{ $project: { " +
+                    "_id: 0, " +
                     "avgGapDays: '$avg_gap_days', " +
                     "daysSinceLastTrip: '$days_since_last', " +
-                    "churnScore: { $divide: ['$days_since_last', '$avg_gap_days'] }, " +
+                    "churnScore: { $cond: [ { $gt: ['$avg_gap_days', 0] }, { $divide: ['$days_since_last', '$avg_gap_days'] }, 0] }, " +
                     "status: { $switch: { " +
                     "branches: [ " +
-                    "{ case: { $gt: [{ $divide: ['$days_since_last', '$avg_gap_days'] }, 2] }, then: 'at_risk' }, " +
-                    "{ case: { $gt: [{ $divide: ['$days_since_last', '$avg_gap_days'] }, 1.2] }, then: 'slowing' } " +
+                    "{ case: { $lte: ['$avg_gap_days', 0] }, then: 'active' }, " +
+                    "{ case: { $gt: [{ $divide: ['$days_since_last', { $max: ['$avg_gap_days', 1] }] }, 2] }, then: 'at_risk' }, " +
+                    "{ case: { $gt: [{ $divide: ['$days_since_last', { $max: ['$avg_gap_days', 1] }] }, 1.2] }, then: 'slowing' } " +
                     "], default: 'active' " +
                     "} } " +
                     "} }"
     })
-    TripFrequencyDTO getTripFrequency(ObjectId travellerId);
+    TripFrequencyDTO getTripFrequency(String email);
 }
