@@ -28,7 +28,6 @@ public class DatabaseInitializer {
     @Autowired
     private TravellerGraphRepository travellerNodeRepository;
 
-    @EventListener(ApplicationReadyEvent.class)
     public void initializeHotelStats() {
         // Esegui gli step solo se guestStats non è ancora stato popolato
         // Controlla se almeno un hotel ha totalVisits > 0

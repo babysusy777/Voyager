@@ -26,6 +26,9 @@ public class DataIngestionService {
     @Autowired
     private MongoTemplate mongoTemplate;
 
+    @Autowired
+    private DatabaseInitializer databaseInitializer;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     @EventListener(ApplicationReadyEvent.class)
@@ -34,6 +37,7 @@ public class DataIngestionService {
         ingestHosts();
         ingestTravellers();
         ingestCities();
+        databaseInitializer.initializeHotelStats();
     }
 
     // ─── HOTELS ───────────────────────────────────────────────────
