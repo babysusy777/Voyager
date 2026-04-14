@@ -38,7 +38,7 @@ public class AuthService {
             newHost.setPassword(passwordEncoder.encode(password)); // Password cifrata
             newHost.setRole(UserRole.HOST);
             hostRepository.save(newHost);
-            return "Traveller registered successfully!";
+            return "Host registered successfully!";
         } else {
             Traveller newTraveller = new Traveller();
             newTraveller.setFullName(fullName);
@@ -56,28 +56,41 @@ public class AuthService {
         return email.endsWith("@voyager.com");
     }
 
-    public Traveller loginTraveller(String email, String password) {
-        Optional<Traveller> userOpt = travellerRepository.findByEmail(email);
-
-        if (userOpt.isPresent()) {
-            Traveller traveller = userOpt.get();
-            if (passwordEncoder.matches(password, traveller.getPassword())) {
-                return traveller;
-            }
+    public Object login(String email, String password) {
+        // 1. Cerca tra i Traveller
+        Optional<Traveller> travellerOpt = travellerRepository.findByEmail(email);
+        if (travellerOpt.isPresent()) {
+            Traveller t = travellerOpt.get();
+            if (passwordEncoder.matches(password, t.getPassword())) return t;
         }
-        throw new RuntimeException("Not valid email or password");
+
+        // 2. Cerca tra gli Host
+        Optional<Host> hostOpt = hostRepository.findByEmail(email);
+        if (hostOpt.isPresent()) {
+            Host h = hostOpt.get();
+            if (passwordEncoder.matches(password, h.getPassword())) return h;
+        }
+
+        throw new RuntimeException("Invalid email or password");
     }
-    
-    
-    public Traveller modifyPassword(ModifyPasswordRequest request) {
 
-        Traveller traveller = travellerRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            traveller.setPassword(passwordEncoder.encode(request.getPassword()));
+    public Object modifyPassword(ModifyPasswordRequest request) {
+        // Cerca prima nel Traveller
+        Optional<Traveller> tOpt = travellerRepository.findByEmail(request.getEmail());
+        if (tOpt.isPresent()) {
+            Traveller t = tOpt.get();
+            t.setPassword(passwordEncoder.encode(request.getPassword()));
+            return travellerRepository.save(t);
         }
 
-        return travellerRepository.save(traveller);
+        // Se non trovato, cerca nell'Host
+        Optional<Host> hOpt = hostRepository.findByEmail(request.getEmail());
+        if (hOpt.isPresent()) {
+            Host h = hOpt.get();
+            h.setPassword(passwordEncoder.encode(request.getPassword()));
+            return hostRepository.save(h);
+        }
+
+        throw new RuntimeException("User not found in any repository");
     }
 }

@@ -109,6 +109,7 @@ public class City {
         //private String attractionId;
 
         private String name;
+        @Field("category")
         private String type;
 
         @Field("centrality_score")

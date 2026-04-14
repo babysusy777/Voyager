@@ -2,6 +2,7 @@ package it.unipi.Voyager.config;
 
 import com.mongodb.client.MongoCollection;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
+import it.unipi.Voyager.service.AttractionService;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
@@ -24,6 +25,9 @@ public class DatabaseInitializer {
 
     @Autowired
     private TravellerGraphRepository travellerNodeRepository;
+
+    @Autowired
+    private AttractionService attractionService;
 
     public void initializeHotelStats() {
         // Esegui gli step solo se guestStats non è ancora stato popolato
@@ -339,7 +343,7 @@ public class DatabaseInitializer {
 
     private void populateTravelTypes() {
         System.out.println("[Init] Step 5 — travelType sui nodi Traveller Neo4j...");
-        //neo4jSyncService.syncAll();
+        neo4jSyncService.syncAll();
         travellerNodeRepository.computeAndStoreTravelTypeAll();
         System.out.println("[Init] Step 5 completato.");
     }
@@ -416,5 +420,42 @@ public class DatabaseInitializer {
 
         travellers.aggregate(pipeline).toCollection();
         System.out.println("[Init] Step 5b completato.");
+    }
+
+    private void populateCityTopAttractions() {
+        System.out.println("[Init] Step 6 — Embedding Top Attractions into Cities...");
+
+        // 1. Prendi tutte le città da MongoDB
+        List<Document> cities = mongoTemplate.findAll(Document.class, "cities");
+
+        for (Document cityDoc : cities) {
+            String cityName = cityDoc.getString("cityName");
+            if (cityName == null) continue;
+
+            // 2. Recupera le top 5 attrazioni usando il Service (che usa Neo4j/Aggregations)
+            List<it.unipi.Voyager.dto.AttractionCentralityDTO> topAttractions =
+                    attractionService.getTopAttractions(cityName);
+
+            if (topAttractions != null && !topAttractions.isEmpty()) {
+                List<Document> attractionSummaries = new ArrayList<>();
+
+                for (it.unipi.Voyager.dto.AttractionCentralityDTO dto : topAttractions) {
+                    Document summary = new Document()
+                            .append("name", dto.getAttractionName())
+                            .append("type", dto.getCategory()) // Mappiamo 'category' del DTO su 'type' di Mongo
+                            .append("centrality_score", dto.getCentralityScore());
+                    attractionSummaries.add(summary);
+                }
+
+                // 3. Update atomico del documento City
+                mongoTemplate.updateFirst(
+                        org.springframework.data.mongodb.core.query.Query.query(
+                                org.springframework.data.mongodb.core.query.Criteria.where("cityName").is(cityName)),
+                        new org.springframework.data.mongodb.core.query.Update().set("top_attractions", attractionSummaries),
+                        "cities"
+                );
+            }
+        }
+        System.out.println("[Init] Step 6 completato.");
     }
 }

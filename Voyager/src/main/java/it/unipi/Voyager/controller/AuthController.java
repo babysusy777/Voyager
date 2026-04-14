@@ -36,18 +36,19 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
-            Traveller traveller = authService.loginTraveller(request.getEmail(), request.getPassword());
-            return ResponseEntity.ok(traveller);
+            // Qui usiamo Object perché può tornare o Traveller o Host
+            Object user = authService.login(request.getEmail(), request.getPassword());
+            return ResponseEntity.ok(user);
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("login failed" + e.getMessage());
+            return ResponseEntity.status(401).body("Login failed: " + e.getMessage());
         }
     }
 
     @PostMapping("/modify-password")
     public ResponseEntity<?> modifyPassword(@RequestBody ModifyPasswordRequest request) {
         try {
-            Traveller updatedTraveller = authService.modifyPassword(request);
-            return ResponseEntity.ok(updatedTraveller);
+            Object updatedUser = authService.modifyPassword(request);
+            return ResponseEntity.ok(updatedUser);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

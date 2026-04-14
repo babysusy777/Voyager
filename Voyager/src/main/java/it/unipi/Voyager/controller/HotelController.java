@@ -1,6 +1,7 @@
 package it.unipi.Voyager.controller;
 
 import it.unipi.Voyager.dto.FacilitiesGapDTO;
+import it.unipi.Voyager.dto.HotelSearchDTO;
 import it.unipi.Voyager.model.Hotel;
 import it.unipi.Voyager.repository.HotelRepository;
 import it.unipi.Voyager.service.HotelService;
@@ -37,9 +38,19 @@ public class HotelController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<Hotel> getHotelByNameAndCityName(@RequestParam String hotelName, @RequestParam String cityName) {
+    public ResponseEntity<HotelSearchDTO> getHotelByNameAndCityName(@RequestParam String hotelName, @RequestParam String cityName) {
         return hotelRepository.findByHotelNameAndCityName(hotelName, cityName)
-                .map(ResponseEntity::ok)
+                .map(h -> {
+                    HotelSearchDTO dto = new HotelSearchDTO();
+                    dto.setHotelName(h.getHotelName());
+                    dto.setCityName(h.getCityName());
+                    dto.setHotelRating(h.getHotelRating());
+                    dto.setAveragePrice(h.getAveragePrice());
+                    dto.setDescription(h.getDescription());
+                    dto.setFacilities(h.getFacilities());
+
+                    return ResponseEntity.ok(dto);
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 

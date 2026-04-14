@@ -118,7 +118,7 @@ public class DataIngestionService {
             return;
         }
         try {
-            InputStream is = new ClassPathResource("hosts.json").getInputStream();
+            InputStream is = new ClassPathResource("hosts_ridotto.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
 
@@ -214,6 +214,14 @@ public class DataIngestionService {
             return;
         }
         try {
+            // --- FIX ERRORE 51183: Creazione Indice Univoco ---
+            // Questo garantisce che cityName sia unico e permette a $merge di funzionare negli step successivi
+            mongoTemplate.getCollection("cities").createIndex(
+                    new Document("cityName", 1),
+                    new com.mongodb.client.model.IndexOptions().unique(true)
+            );
+            System.out.println("[Ingestion] Indice univoco su cityName creato.");
+
             InputStream is = new ClassPathResource("city_final.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
