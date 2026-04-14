@@ -63,6 +63,7 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
             "{ $project: { missing: { $setDifference: ['$peer_facilities', ?3] } } }"
     })
     FacilitiesGapDTO getFacilitiesGap(String city, String rating, double minRating, List<String> myFacilities);
+
     @Aggregation(pipeline = {
             // 1. IL MATCH SFRUTTA L'INDICE: Filtra istantaneamente per città e (opzionalmente) rating
             // Usiamo ?0 per cityName. Se vuoi filtrare anche per stelle, aggiungeresti ?1
@@ -89,5 +90,5 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
                     "} } " +
                     "} }"
     })
-    CityIndexDTO getCityPressureIndexWithIndex(String cityName);
+    CityIndexDTO getCityIndex(String cityName);
 }

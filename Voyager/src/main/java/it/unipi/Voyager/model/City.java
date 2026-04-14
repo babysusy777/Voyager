@@ -1,39 +1,37 @@
 package it.unipi.Voyager.model;
 
-import org.bson.types.ObjectId;
-import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.List;
-import java.util.Map;
 
 @Document(collection = "cities")
+@CompoundIndex(name = "city_name_unique_idx", def = "{'cityName': 1}", unique = true)
 public class City {
 
-    @Id
-    private ObjectId id;
 
+    @Field("cityName")
     private String name;
-    private String country;
 
-    @Field("country_code")
-    private String countryCode;
+    @Field("cost_of_living")
+    private String costOfLiving;
 
-    private String description;
+    @Field("safety")
+    private String safety;
 
-    @Field("avg_budget")
-    private String avgBudget; // "low" | "medium" | "high"
+    @Field("category")
+    private String category;
 
-    @Field("safety_index")
-    private double safetyIndex;
+    @Field("best_time_to_visit")
+    private String bestTimeToVisit;
 
     private Seasonality seasonality;
 
-    @Field("city_index")
-    private CityIndex cityIndex;
-
-    private List<HotelSummary> hotels; // partial embedding
+    @Field("top_value_hotels")
+    private List<HotelSummary> topValueHotels;
+    @Field("other_hotel_ids")
+    private List<String> otherHotelIds;
 
     @Field("top_attractions")
     private List<AttractionSummary> topAttractions;
@@ -71,61 +69,44 @@ public class City {
     }
 
     public static class CityIndex {
-        @Field("total_visits")
-        private int totalVisits;
-
-        @Field("hotel_count")
-        private int hotelCount;
 
         @Field("demand_ratio")
-        private double demandRatio;
+        private double demandVsSupplyRatio;
 
         // Getters & Setters
-        public int getTotalVisits() { return totalVisits; }
-        public void setTotalVisits(int totalVisits) { this.totalVisits = totalVisits; }
 
-        public int getHotelCount() { return hotelCount; }
-        public void setHotelCount(int hotelCount) { this.hotelCount = hotelCount; }
-
-        public double getDemandRatio() { return demandRatio; }
-        public void setDemandRatio(double demandRatio) { this.demandRatio = demandRatio; }
+        public double getDemandRatio() { return demandVsSupplyRatio; }
+        public void setDemandRatio(double demandVsSupplyRatio) { this.demandVsSupplyRatio = demandVsSupplyRatio; }
     }
 
-    public static class HotelSummary {
-        @Field("hotel_id")
-        private String hotelId;
+    public static class HotelSummary { // Partial Embedding
 
         @Field("hotel_name")
         private String hotelName;
 
-        private int stars;
+        @Field("stars")
+        private String stars;
 
         @Field("avg_price")
         private double avgPrice;
 
-        @Field("avg_rating")
-        private double avgRating;
 
         // Getters & Setters
-        public String getHotelId() { return hotelId; }
-        public void setHotelId(String hotelId) { this.hotelId = hotelId; }
-
         public String getHotelName() { return hotelName; }
         public void setHotelName(String hotelName) { this.hotelName = hotelName; }
 
-        public int getStars() { return stars; }
-        public void setStars(int stars) { this.stars = stars; }
+        public String getHotelStars() { return stars; }
+        public void setHotelStars(String stars) { this.stars = stars; }
 
         public double getAvgPrice() { return avgPrice; }
         public void setAvgPrice(double avgPrice) { this.avgPrice = avgPrice; }
 
-        public double getAvgRating() { return avgRating; }
-        public void setAvgRating(double avgRating) { this.avgRating = avgRating; }
+
     }
 
     public static class AttractionSummary {
-        @Field("attraction_id")
-        private String attractionId;
+        //@Field("attraction_id")
+        //private String attractionId;
 
         private String name;
         private String type;
@@ -134,8 +115,8 @@ public class City {
         private double centralityScore;
 
         // Getters & Setters
-        public String getAttractionId() { return attractionId; }
-        public void setAttractionId(String attractionId) { this.attractionId = attractionId; }
+        //public String getAttractionId() { return attractionId; }
+        //public void setAttractionId(String attractionId) { this.attractionId = attractionId; }
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -149,36 +130,33 @@ public class City {
 
     // ─── Getters & Setters (City) ─────────────────────────────────
 
-    public ObjectId getId() { return id; }
-    public void setId(ObjectId id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
-    public String getCountry() { return country; }
-    public void setCountry(String country) { this.country = country; }
+    public String getCostOfLiving() { return costOfLiving; }
+    public void setCostOfLiving(String costOfLiving) { this.costOfLiving = costOfLiving; }
 
-    public String getCountryCode() { return countryCode; }
-    public void setCountryCode(String countryCode) { this.countryCode = countryCode; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
+    public String getBestTimeToVisit() { return bestTimeToVisit; }
+    public void setBestTimeToVisit(String bestTimeToVisit) { this.bestTimeToVisit = bestTimeToVisit; }
 
-    public String getAvgBudget() { return avgBudget; }
-    public void setAvgBudget(String avgBudget) { this.avgBudget = avgBudget; }
-
-    public double getSafetyIndex() { return safetyIndex; }
-    public void setSafetyIndex(double safetyIndex) { this.safetyIndex = safetyIndex; }
+    public String getSafety() { return safety; }
+    public void setSafety(String safetyIndex) { this.safety = safety; }
 
     public Seasonality getSeasonality() { return seasonality; }
     public void setSeasonality(Seasonality seasonality) { this.seasonality = seasonality; }
 
-    public CityIndex getCityIndex() { return cityIndex; }
-    public void setCityIndex(CityIndex cityIndex) { this.cityIndex = cityIndex; }
 
-    public List<HotelSummary> getHotels() { return hotels; }
-    public void setHotels(List<HotelSummary> hotels) { this.hotels = hotels; }
+    public List<HotelSummary> getTopValueHotels() { return topValueHotels; }
+    public void setTopValueHotels(List<HotelSummary> topValueHotels) { this.topValueHotels = topValueHotels; }
+
+    public List<String> getOtherHotelIds() { return otherHotelIds; }
+    public void setOtherHotelIds(List<String> otherHotelIds) { this.otherHotelIds = otherHotelIds; }
 
     public List<AttractionSummary> getTopAttractions() { return topAttractions; }
     public void setTopAttractions(List<AttractionSummary> topAttractions) { this.topAttractions = topAttractions; }
+
 }

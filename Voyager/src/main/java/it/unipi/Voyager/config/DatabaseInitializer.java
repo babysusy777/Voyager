@@ -2,11 +2,8 @@ package it.unipi.Voyager.config;
 
 import com.mongodb.client.MongoCollection;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
-import it.unipi.Voyager.config.Neo4jSyncService;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Component;
@@ -47,6 +44,8 @@ public class DatabaseInitializer {
         populateTravellerSegments();
         // Step 4: segment_distribution + preference_distribution su ogni hotel (dipende da Step 3)
         populateSegmentAndPreferenceDistribution();
+        populateCitySeasonality();
+        populateTravelTypes();
         // Step 5: calcola travelType su tutti i nodi Traveller in Neo4j
         populateTravelTypes();
     }
@@ -340,8 +339,82 @@ public class DatabaseInitializer {
 
     private void populateTravelTypes() {
         System.out.println("[Init] Step 5 — travelType sui nodi Traveller Neo4j...");
-        neo4jSyncService.syncAll();
+        //neo4jSyncService.syncAll();
         travellerNodeRepository.computeAndStoreTravelTypeAll();
         System.out.println("[Init] Step 5 completato.");
+    }
+
+    private void populateCitySeasonality() {
+        System.out.println("[Init] Step 5b — seasonality cities...");
+
+        MongoCollection<Document> travellers = mongoTemplate.getCollection("travellers");
+
+        List<Document> pipeline = Arrays.asList(
+
+                new Document("$unwind", "$past_trips"),
+
+                new Document("$group", new Document("_id", "$past_trips.city")
+                        .append("spring", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.season", "spring")), 1, 0))))
+                        .append("summer", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.season", "summer")), 1, 0))))
+                        .append("autumn", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.season", "autumn")), 1, 0))))
+                        .append("winter", new Document("$sum", new Document("$cond", Arrays.asList(
+                                new Document("$eq", Arrays.asList("$past_trips.season", "winter")), 1, 0))))
+                        .append("total", new Document("$sum", 1))
+                ),
+
+                // Calcola peak_season e concentration_ratio
+                new Document("$project", new Document("_id", 1)
+                        .append("spring", 1).append("summer", 1)
+                        .append("autumn", 1).append("winter", 1)
+                        .append("peak_season", new Document("$switch", new Document("branches", Arrays.asList(
+                                new Document("case", new Document("$and", Arrays.asList(
+                                        new Document("$gte", Arrays.asList("$spring", "$summer")),
+                                        new Document("$gte", Arrays.asList("$spring", "$autumn")),
+                                        new Document("$gte", Arrays.asList("$spring", "$winter"))
+                                ))).append("then", "spring"),
+                                new Document("case", new Document("$and", Arrays.asList(
+                                        new Document("$gte", Arrays.asList("$summer", "$spring")),
+                                        new Document("$gte", Arrays.asList("$summer", "$autumn")),
+                                        new Document("$gte", Arrays.asList("$summer", "$winter"))
+                                ))).append("then", "summer"),
+                                new Document("case", new Document("$and", Arrays.asList(
+                                        new Document("$gte", Arrays.asList("$autumn", "$spring")),
+                                        new Document("$gte", Arrays.asList("$autumn", "$summer")),
+                                        new Document("$gte", Arrays.asList("$autumn", "$winter"))
+                                ))).append("then", "autumn")
+                        )).append("default", "winter")))
+                        .append("concentration_ratio", new Document("$divide", Arrays.asList(
+                                new Document("$max", Arrays.asList("$spring", "$summer", "$autumn", "$winter")),
+                                "$total"
+                        )))
+                ),
+
+                // Merge su cities usando cityName
+                new Document("$project", new Document("cityName", "$_id")
+                        .append("_id", 0)
+                        .append("seasonality", new Document()
+                                .append("spring", "$spring")
+                                .append("summer", "$summer")
+                                .append("autumn", "$autumn")
+                                .append("winter", "$winter")
+                                .append("peak_season", "$peak_season")
+                                .append("concentration_ratio", "$concentration_ratio")
+                        )
+                ),
+
+                new Document("$merge", new Document("into", "cities")
+                        .append("on", "cityName")
+                        .append("whenMatched", Arrays.asList(
+                                new Document("$set", new Document("seasonality", "$$new.seasonality"))
+                        ))
+                        .append("whenNotMatched", "discard")
+                )
+        );
+
+        travellers.aggregate(pipeline).toCollection();
+        System.out.println("[Init] Step 5b completato.");
     }
 }

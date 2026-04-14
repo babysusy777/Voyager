@@ -37,9 +37,9 @@ public class CityController {
                 .map(ResponseEntity::ok) // 200 OK
                 .orElse(ResponseEntity.notFound().build()); //  404 Not Found se non esiste
     }
-    @GetMapping("/host/city-intelligence")
 
-    public ResponseEntity<?> getCityIntelligence(@RequestParam String cityName) {
+    @GetMapping("/host/city-index")
+    public ResponseEntity<?> getCityIndex(@RequestParam String cityName) {
         try {
             CityIndexDTO index = hotelService.getCityIndex(cityName);
             return ResponseEntity.ok(index);
@@ -50,8 +50,9 @@ public class CityController {
             // Restituisce 500 per errori imprevisti (es. database offline)
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-}
-    @GetMapping("/traveller/discovery")
+    }
+
+    @GetMapping("/traveller/discovery-tips")
     public ResponseEntity<List<AttractionDiscoveryDTO>> getDiscoveryTips(@RequestParam String email) {
         try {
             List<AttractionDiscoveryDTO> tips = travellerGraphRepository.findReturningTravelerTips(email);

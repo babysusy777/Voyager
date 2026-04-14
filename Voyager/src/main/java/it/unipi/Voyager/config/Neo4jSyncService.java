@@ -1,6 +1,5 @@
 package it.unipi.Voyager.config;
 
-import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.model.graph.*;
 import it.unipi.Voyager.repository.graph.*;
 import org.bson.Document;

@@ -67,7 +67,7 @@ public class HotelService {
     }
     public CityIndexDTO getCityIndex(String cityName) {
         // Chiamata diretta alla repository con il parametro di filtro
-        CityIndexDTO index = hotelRepository.getCityPressureIndexWithIndex(cityName);
+        CityIndexDTO index = hotelRepository.getCityIndex(cityName);
 
         // Se la repository restituisce null (nessun hotel trovato per quella città)
         if (index == null) {

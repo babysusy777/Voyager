@@ -3,12 +3,9 @@ package it.unipi.Voyager.config;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unipi.Voyager.model.UserRole;
-import it.unipi.Voyager.model.graph.TravellerNode;
-import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ClassPathResource;
@@ -223,26 +220,88 @@ public class DataIngestionService {
 
             for (JsonNode node : root) {
                 Document doc = new Document();
-                doc.append("cityName", node.path("cityName").asText());
+                String cityName = node.path("cityName").asText();
 
-                List<Document> attractions = new ArrayList<>();
-                for (JsonNode a : node.path("attractions")) {
-                    Document attr = new Document();
-                    attr.append("name", a.path("name").asText());
-                    List<String> types = new ArrayList<>();
-                    for (JsonNode t : a.path("type")) types.add(t.asText());
-                    attr.append("type", types);
-                    attractions.add(attr);
+                doc.append("cityName",          cityName);
+                doc.append("cost_of_living",    node.path("cost_of_living").asText());
+                doc.append("safety",            node.path("safety").asText());
+                doc.append("category",          node.path("category").asText());
+                doc.append("best_time_to_visit", node.path("best_time_to_visit").asText());
+
+                // 1. Seasonality
+                JsonNode s = node.path("seasonality");
+                doc.append("seasonality", new Document()
+                        .append("spring", s.path("spring").asInt())
+                        .append("summer", s.path("summer").asInt())
+                        .append("autumn", s.path("autumn").asInt())
+                        .append("winter", s.path("winter").asInt())
+                        .append("peak_season",         s.path("peak_season").asText())
+                        .append("concentration_ratio", s.path("concentration_ratio").asDouble())
+                );
+
+                // 2. Recupero Hotel della città per strategia IBRIDA
+                List<Document> allHotelsInCity = new ArrayList<>();
+                mongoTemplate.getCollection("hotels")
+                        .find(new Document("cityName", cityName))
+                        .forEach(allHotelsInCity::add);
+
+                // Ordinamento: Stelle (decrescente) e poi Prezzo (crescente)
+                allHotelsInCity.sort((h1, h2) -> {
+                    int s1 = parseStars(h1.getString("HotelRating"));
+                    int s2 = parseStars(h2.getString("HotelRating"));
+                    if (s1 != s2) return Integer.compare(s2, s1); // Stelle desc
+
+                    double p1 = h1.getDouble("average_price_per_night") != null ? h1.getDouble("average_price_per_night") : 0.0;
+                    double p2 = h2.getDouble("average_price_per_night") != null ? h2.getDouble("average_price_per_night") : 0.0;
+                    return Double.compare(p1, p2); // Prezzo asc
+                });
+
+                // --- PARTIAL EMBEDDING (Top 5) ---
+                List<Document> topValueHotels = new ArrayList<>();
+                int limit = Math.min(allHotelsInCity.size(), 5);
+                for (int i = 0; i < limit; i++) {
+                    Document h = allHotelsInCity.get(i);
+                    topValueHotels.add(new Document()
+                            .append("hotel_name", h.getString("HotelName"))
+                            .append("stars",      h.getString("HotelRating")) // Manteniamo stringa come da modello
+                            .append("avg_price",  h.getDouble("average_price_per_night"))
+                    );
                 }
-                doc.append("attractions", attractions);
+                doc.append("top_value_hotels", topValueHotels);
+
+                // --- LINKING (Tutti gli altri ID) ---
+                List<String> otherHotelIds = new ArrayList<>();
+                for (int i = limit; i < allHotelsInCity.size(); i++) {
+                    Document h = allHotelsInCity.get(i);
+                    otherHotelIds.add(h.getObjectId("_id").toHexString());
+                }
+                doc.append("other_hotel_ids", otherHotelIds);
+
+                // 3. Altri campi
+                doc.append("top_attractions", new ArrayList<>());
+                doc.append("city_index", new Document("total_visits", 0).append("hotel_count", allHotelsInCity.size()));
+
                 docs.add(doc);
             }
 
             mongoTemplate.getCollection("cities").insertMany(docs);
-            System.out.println("[Ingestion] Cities inserite: " + docs.size());
+            System.out.println("[Ingestion] Cities inserite con strategia ibrida: " + docs.size());
 
         } catch (Exception e) {
             System.err.println("[Ingestion] Errore cities: " + e.getMessage());
+            e.printStackTrace();
         }
+    }
+
+    private int parseStars(String rating) {
+        if (rating == null) return 0;
+        return switch (rating.toLowerCase()) {
+            case "onestar"   -> 1;
+            case "twostar"   -> 2;
+            case "threestar" -> 3;
+            case "fourstar"  -> 4;
+            case "fivestar"  -> 5;
+            default          -> 0;
+        };
     }
 }

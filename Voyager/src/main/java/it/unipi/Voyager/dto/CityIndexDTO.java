@@ -6,7 +6,6 @@ package it.unipi.Voyager.dto;
  */
 public class CityIndexDTO {
     private String cityName;
-    private String hotelRating;   // Aggiunto per matchare l'indice city_stars_idx
     private int hotelCount;
     private int totalCityVisits;
     private Double demandRatio;
@@ -16,10 +15,7 @@ public class CityIndexDTO {
 
     public String getCityName() { return cityName; }
     public void setCityName(String cityName) { this.cityName = cityName; }
-
-    public String getHotelRating() { return hotelRating; }
-    public void setHotelRating(String hotelRating) { this.hotelRating = hotelRating; }
-
+    
     public int getHotelCount() { return hotelCount; }
     public void setHotelCount(int hotelCount) { this.hotelCount = hotelCount; }
 
