@@ -59,13 +59,19 @@ public class DatabaseInitializer {
         MongoCollection<Document> travellers = mongoTemplate.getCollection("travellers");
 
         List<Document> pipeline = Arrays.asList(
-
+                // 1. Srotola i viaggi
                 new Document("$unwind", "$past_trips"),
 
-                // Raggruppa per coppia (hotel_name, city)
+                // 2. Srotola la lista degli hotel (essendo ora un array hotels: [ { hotelName: ... } ])
+                new Document("$unwind", "$past_trips.hotels"),
+
+                // 3. Srotola la lista delle città (essendo ora city: [ 'Rome' ])
+                new Document("$unwind", "$past_trips.city"),
+
+                // Raggruppa per coppia (hotelName, cityName)
                 new Document("$group", new Document("_id", new Document()
-                        .append("hotelName", "$past_trips.hotel_name")
-                        .append("cityName", "$past_trips.city"))
+                        .append("hotelName", "$past_trips.hotels.hotelName") // Path aggiornato
+                        .append("cityName", "$past_trips.city"))           // Path dopo unwind
                         .append("totalVisits", new Document("$sum", 1))
                         .append("spring", new Document("$sum", new Document("$cond", Arrays.asList(
                                 new Document("$eq", Arrays.asList("$past_trips.season", "spring")), 1, 0))))
@@ -157,13 +163,32 @@ public class DatabaseInitializer {
         MongoCollection<Document> travellers = mongoTemplate.getCollection("travellers");
 
         List<Document> pipeline = Arrays.asList(
-
+                // 1. Srotoliamo i viaggi
                 new Document("$unwind", "$past_trips"),
 
+                // 2. Srotoliamo le città (perché past_trips.city è un array)
+                new Document("$unwind", "$past_trips.city"),
+
+                // 3. Srotoliamo gli hotel (perché past_trips.hotels è un array)
+                new Document("$unwind", "$past_trips.hotels"),
+                // --- NUOVO STEP: Conversione Stringa -> Numero ---
+                new Document("$addFields", new Document("numericStars",
+                        new Document("$switch", new Document("branches", Arrays.asList(
+                                new Document("case", new Document("$in", Arrays.asList("$past_trips.hotels.hotelStars", Arrays.asList("oneStar", "1")))).append("then", 1),
+                                new Document("case", new Document("$in", Arrays.asList("$past_trips.hotels.hotelStars", Arrays.asList("twoStar", "2")))).append("then", 2),
+                                new Document("case", new Document("$in", Arrays.asList("$past_trips.hotels.hotelStars", Arrays.asList("threeStar", "3")))).append("then", 3),
+                                new Document("case", new Document("$in", Arrays.asList("$past_trips.hotels.hotelStars", Arrays.asList("fourStar", "4")))).append("then", 4),
+                                new Document("case", new Document("$in", Arrays.asList("$past_trips.hotels.hotelStars", Arrays.asList("fiveStar", "5")))).append("then", 5)
+                        )).append("default", 0))
+                )),
+
                 new Document("$group", new Document("_id", "$_id")
+                        // Raccogliamo le città uniche (ora sono stringhe singole dopo l'unwind)
                         .append("unique_cities", new Document("$addToSet", "$past_trips.city"))
-                        .append("avg_stars",     new Document("$avg", "$past_trips.hotel_stars"))
-                        .append("total_trips",   new Document("$sum", 1))
+                        // Media delle stelle accedendo al nuovo path hotels.hotelStars
+                        // Nota: se hotelStars è salvato come Stringa, usa {$toDouble: "$past_trips.hotels.hotelStars"}
+                        .append("avg_stars", new Document("$avg", "$past_trips.hotels.hotelStars"))
+                        .append("total_trips", new Document("$sum", 1))
                 ),
 
                 new Document("$project", new Document()
@@ -214,16 +239,22 @@ public class DatabaseInitializer {
         MongoCollection<Document> travellers = mongoTemplate.getCollection("travellers");
 
         List<Document> pipeline = Arrays.asList(
-
+                // 1. Srotola i viaggi
                 new Document("$unwind", "$past_trips"),
 
-                // Raggruppa per coppia (hotel_name, city)
+                // 2. Srotola le città (ora array)
+                new Document("$unwind", "$past_trips.city"),
+
+                // 3. Srotola gli hotel (ora array di oggetti)
+                new Document("$unwind", "$past_trips.hotels"),
+
+                // Raggruppa per coppia (hotelName, cityName)
                 new Document("$group", new Document("_id", new Document()
-                        .append("hotelName", "$past_trips.hotel_name")
-                        .append("cityName",  "$past_trips.city"))
+                        .append("hotelName", "$past_trips.hotels.hotelName") // Path aggiornato
+                        .append("cityName",  "$past_trips.city"))           // Path aggiornato
                         .append("total", new Document("$sum", 1))
 
-                        // segment counts
+                        // segment counts (il campo user_segment è sulla radice del traveller)
                         .append("explorer",       new Document("$sum", new Document("$cond", Arrays.asList(
                                 new Document("$eq", Arrays.asList("$user_segment", "explorer")), 1, 0))))
                         .append("comfort_seeker", new Document("$sum", new Document("$cond", Arrays.asList(
@@ -233,13 +264,13 @@ public class DatabaseInitializer {
                         .append("budget_hunter",  new Document("$sum", new Document("$cond", Arrays.asList(
                                 new Document("$eq", Arrays.asList("$user_segment", "budget-hunter")), 1, 0))))
 
-                        // budget counts
+                        // budget counts (il campo è stato rinominato in 'budget')
                         .append("budget_low",    new Document("$sum", new Document("$cond", Arrays.asList(
-                                new Document("$eq", Arrays.asList("$past_trips.trip_budget", "low")), 1, 0))))
+                                new Document("$eq", Arrays.asList("$past_trips.budget", "low")), 1, 0))))
                         .append("budget_medium", new Document("$sum", new Document("$cond", Arrays.asList(
-                                new Document("$eq", Arrays.asList("$past_trips.trip_budget", "medium")), 1, 0))))
+                                new Document("$eq", Arrays.asList("$past_trips.budget", "medium")), 1, 0))))
                         .append("budget_high",   new Document("$sum", new Document("$cond", Arrays.asList(
-                                new Document("$eq", Arrays.asList("$past_trips.trip_budget", "high")), 1, 0))))
+                                new Document("$eq", Arrays.asList("$past_trips.budget", "high")), 1, 0))))
 
                         // season counts
                         .append("season_spring", new Document("$sum", new Document("$cond", Arrays.asList(
@@ -256,7 +287,6 @@ public class DatabaseInitializer {
                         .append("HotelName", "$_id.hotelName")
                         .append("cityName",  "$_id.cityName")
                         .append("guestStats", new Document()
-
                                 .append("segment_distribution", new Document()
                                         .append("explorer",       new Document("$divide", Arrays.asList("$explorer",       "$total")))
                                         .append("comfort-seeker", new Document("$divide", Arrays.asList("$comfort_seeker", "$total")))
@@ -280,7 +310,6 @@ public class DatabaseInitializer {
                                                 ))).append("then", "upgrader")
                                         )).append("default", "budget-hunter")))
                                 )
-
                                 .append("preference_distribution", new Document()
                                         .append("budget", new Document()
                                                 .append("low",    new Document("$divide", Arrays.asList("$budget_low",    "$total")))
@@ -353,9 +382,13 @@ public class DatabaseInitializer {
         MongoCollection<Document> travellers = mongoTemplate.getCollection("travellers");
 
         List<Document> pipeline = Arrays.asList(
-
+                // 1. Srotola i viaggi
                 new Document("$unwind", "$past_trips"),
 
+                // 2. Srotola l'array delle città (fondamentale perché city: [ 'Rome' ])
+                new Document("$unwind", "$past_trips.city"),
+
+                // Raggruppa per il nome della città singola
                 new Document("$group", new Document("_id", "$past_trips.city")
                         .append("spring", new Document("$sum", new Document("$cond", Arrays.asList(
                                 new Document("$eq", Arrays.asList("$past_trips.season", "spring")), 1, 0))))
@@ -391,7 +424,7 @@ public class DatabaseInitializer {
                         )).append("default", "winter")))
                         .append("concentration_ratio", new Document("$divide", Arrays.asList(
                                 new Document("$max", Arrays.asList("$spring", "$summer", "$autumn", "$winter")),
-                                "$total"
+                                new Document("$cond", Arrays.asList(new Document("$eq", Arrays.asList("$total", 0)), 1, "$total"))
                         )))
                 ),
 
@@ -421,40 +454,40 @@ public class DatabaseInitializer {
         System.out.println("[Init] Step 5b completato.");
     }
 
-    private void populateCityTopAttractions() {
-        System.out.println("[Init] Step 6 — Embedding Top Attractions into Cities...");
-
-        // 1. Prendi tutte le città da MongoDB
-        List<Document> cities = mongoTemplate.findAll(Document.class, "cities");
-
-        for (Document cityDoc : cities) {
-            String cityName = cityDoc.getString("cityName");
-            if (cityName == null) continue;
-
-            // 2. Recupera le top 5 attrazioni usando il Service (che usa Neo4j/Aggregations)
-            List<it.unipi.Voyager.dto.AttractionCentralityDTO> topAttractions =
-                    attractionService.getTopAttractions(cityName);
-
-            if (topAttractions != null && !topAttractions.isEmpty()) {
-                List<Document> attractionSummaries = new ArrayList<>();
-
-                for (it.unipi.Voyager.dto.AttractionCentralityDTO dto : topAttractions) {
-                    Document summary = new Document()
-                            .append("name", dto.getAttractionName())
-                            .append("type", dto.getCategory()) // Mappiamo 'category' del DTO su 'type' di Mongo
-                            .append("centrality_score", dto.getCentralityScore());
-                    attractionSummaries.add(summary);
-                }
-
-                // 3. Update atomico del documento City
-                mongoTemplate.updateFirst(
-                        org.springframework.data.mongodb.core.query.Query.query(
-                                org.springframework.data.mongodb.core.query.Criteria.where("cityName").is(cityName)),
-                        new org.springframework.data.mongodb.core.query.Update().set("top_attractions", attractionSummaries),
-                        "cities"
-                );
-            }
-        }
-        System.out.println("[Init] Step 6 completato.");
-    }
+//    private void populateCityTopAttractions() {
+//        System.out.println("[Init] Step 6 — Embedding Top Attractions into Cities...");
+//
+//        // 1. Prendi tutte le città da MongoDB
+//        List<Document> cities = mongoTemplate.findAll(Document.class, "cities");
+//
+//        for (Document cityDoc : cities) {
+//            String cityName = cityDoc.getString("cityName");
+//            if (cityName == null) continue;
+//
+//            // 2. Recupera le top 5 attrazioni usando il Service (che usa Neo4j/Aggregations)
+//            List<it.unipi.Voyager.dto.AttractionCentralityDTO> topAttractions =
+//                    attractionService.getTopAttractions(cityName);
+//
+//            if (topAttractions != null && !topAttractions.isEmpty()) {
+//                List<Document> attractionSummaries = new ArrayList<>();
+//
+//                for (it.unipi.Voyager.dto.AttractionCentralityDTO dto : topAttractions) {
+//                    Document summary = new Document()
+//                            .append("name", dto.getAttractionName())
+//                            .append("type", dto.getCategory()) // Mappiamo 'category' del DTO su 'type' di Mongo
+//                            .append("centrality_score", dto.getCentralityScore());
+//                    attractionSummaries.add(summary);
+//                }
+//
+//                // 3. Update atomico del documento City
+//                mongoTemplate.updateFirst(
+//                        org.springframework.data.mongodb.core.query.Query.query(
+//                                org.springframework.data.mongodb.core.query.Criteria.where("cityName").is(cityName)),
+//                        new org.springframework.data.mongodb.core.query.Update().set("top_attractions", attractionSummaries),
+//                        "cities"
+//                );
+//            }
+//        }
+//        System.out.println("[Init] Step 6 completato.");
+//    }
 }

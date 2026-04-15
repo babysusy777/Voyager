@@ -1,5 +1,6 @@
 package it.unipi.Voyager.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -33,6 +34,7 @@ public class Traveller {
     @Field("past_trips")
     private List<Trip> trips;
 
+
     @Field("travel_type")
     private String travelType;
 
@@ -40,8 +42,8 @@ public class Traveller {
     public static class Preferences {
         private String budget;
 
-        //@Field("travel_type")
-        //private String travelType;
+        @Field("travel_type")
+        private String travelType;
 
         private String season;
 
@@ -73,12 +75,16 @@ public class Traveller {
         @Field("rating_given")
         private int ratingGiven;
 
+        @Field("budget")
+        private String budget;
+
         public static class HotelSummary {
             @Field("hotelName")
             private String hotelName;
 
             @Field("hotelStars")
             private String hotelStars;
+
 
             public HotelSummary() {}
 
@@ -115,7 +121,7 @@ public class Traveller {
 
     // ─── Getters & Setters (Traveler) ─────────────────────────
 
-    public String getTravelType() { return travelType; }
+   public String getTravelType() { return travelType; }
     public void setTravelType(String travelType) { this.travelType = travelType; }
 
     public ObjectId getId() { return id; }

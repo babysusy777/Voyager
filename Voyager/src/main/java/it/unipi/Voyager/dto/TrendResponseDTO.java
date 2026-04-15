@@ -5,14 +5,12 @@ public class TrendResponseDTO {
     private String trend; 
     private String message;
 
-    public TrendResponseDTO(String userId, String trend, String message) {
+    public TrendResponseDTO(String userId, String trend) {
         this.userId = userId;
         this.trend = trend;
-        this.message = message;
     }
 
     // Getters e Setters
     public String getUserId() { return userId; }
     public String getTrend() { return trend; }
-    public String getMessage() { return message; }
 }

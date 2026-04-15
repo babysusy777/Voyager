@@ -180,22 +180,35 @@ public class DataIngestionService {
                         .append("season",      prefs.path("season").asText())
                 );
 
+
                 // past_trips: hotel_id nel JSON diventa hotel_name embedded
-                List<Document> trips = new ArrayList<>();
-                for (JsonNode t : node.path("past_trips")) {
-                    trips.add(new Document()
-                            .append("trip_name",    t.path("trip_name").asText())
-                            .append("city",         t.path("city").asText())
-                            .append("hotel_name",   t.path("hotel_id").asText()) // hotel_id = nome hotel
-                            .append("season",       t.path("season").asText())
-                            .append("date",         t.path("date").asText())
-                            .append("rating_given", t.path("rating_given").asInt())
-                            .append("hotel_stars",  t.path("hotel_stars").asInt())
-                            .append("trip_budget",  t.path("trip_budget").asText())
-                    );
-                }
-                doc.append("past_trips", trips);
-                docs.add(doc);
+                    List<Document> trips = new ArrayList<>();
+                    for (JsonNode t : node.path("past_trips")) {
+                        // 1. Gestione City come Lista
+                        List<String> cities = new ArrayList<>();
+                        cities.add(t.path("city").asText());
+
+                        // 2. Creazione dell'oggetto embedded 'hotels'
+                        // Creiamo una lista di Document per rispettare la struttura [ { ... } ]
+                        List<Document> hotelsList = new ArrayList<>();
+                        hotelsList.add(new Document()
+                                .append("hotelName",  t.path("hotel_id").asText()) // Mappato su hotelName come richiesto
+                                .append("hotelStars", t.path("hotel_stars").asText()) // Nota: nel tuo esempio è una stringa ('threeStar')
+                        );
+
+                        // 3. Costruzione del documento Trip principale
+                        trips.add(new Document()
+                                .append("trip_name",    t.path("trip_name").asText())
+                                .append("city",         cities) // Ora è una lista
+                                .append("hotels",       hotelsList) // Array di oggetti embedded
+                                .append("season",       t.path("season").asText())
+                                .append("date",         t.path("date").asText())
+                                .append("rating_given", t.path("rating_given").asInt())
+                                .append("budget",       t.path("trip_budget").asText()) // Cambiato 'trip_budget' in 'budget'
+                        );
+                    }
+                    doc.append("past_trips", trips);
+                    docs.add(doc);
             }
 
             mongoTemplate.getCollection("travellers").insertMany(docs);

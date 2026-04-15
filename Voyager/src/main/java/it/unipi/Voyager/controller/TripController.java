@@ -62,11 +62,7 @@ public class TripController {
         try {
             String trendResult = travellerService.getTravelerStarTrend(email);
 
-
-            String status = trendResult.contains("CRESCENTE") ? "CRESCENTE" :
-                    trendResult.contains("DECRESCENTE") ? "DECRESCENTE" : "STABILE";
-
-            TrendResponseDTO response = new TrendResponseDTO(email, status, trendResult);
+            TrendResponseDTO response = new TrendResponseDTO(email, trendResult);
 
             return ResponseEntity.ok(response);
 

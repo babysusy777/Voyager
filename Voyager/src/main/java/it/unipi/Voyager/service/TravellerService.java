@@ -44,6 +44,7 @@ public class TravellerService {
         Traveller.Preferences preferences = new Traveller.Preferences();
         preferences.setBudget(request.getBudget());
         preferences.setSeason(request.getSeason());
+        prefs.setTravelType(request.getTravelType());
         traveller.setPreferences(preferences);
 
         Traveller saved = travellerRepository.save(traveller);
@@ -76,6 +77,12 @@ public class TravellerService {
 
         // 3. Esecuzione della query di aggregazione sull'ID dell'utente trovato [cite: 291]
         return travellerRepository.getTripFrequency(traveller.getEmail());
+    }
+
+    public void deleteTrip(String email, TripDTO tripDTO) {
+        Traveller traveller = travellerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
+
     }
 
     public void upsertTrip(String email, TripDTO tripDto) {
@@ -114,7 +121,8 @@ public class TravellerService {
                 .append("hotels", hotelDocs)
                 .append("season", tripDto.getSeason())
                 .append("date", tripDto.getDate())
-                .append("rating_given", tripDto.getRatingGiven());
+                .append("rating_given", tripDto.getRatingGiven()).append("budget", tripDto.getBudget());
+
 
 
             mongoTemplate.getCollection("travellers").updateOne(
@@ -174,11 +182,16 @@ public class TravellerService {
                 // e convertiamo la stringa "threeStar" in numero
                 new Document("$project", new Document("tripDate", "$past_trips.date")
                         .append("starValue", new Document("$switch", new Document("branches", Arrays.asList(
-                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "oneStar"))).append("then", 1),
-                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "twoStar"))).append("then", 2),
-                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "threeStar"))).append("then", 3),
-                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "fourStar"))).append("then", 4),
-                                new Document("case", new Document("$eq", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), "fiveStar"))).append("then", 5)
+                                // Gestione formato "oneStar" O "1"
+                                new Document("case", new Document("$in", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), Arrays.asList("oneStar", "1")))).append("then", 1),
+                                // Gestione formato "twoStar" O "2"
+                                new Document("case", new Document("$in", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), Arrays.asList("twoStar", "2")))).append("then", 2),
+                                // Gestione formato "threeStar" O "3"
+                                new Document("case", new Document("$in", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), Arrays.asList("threeStar", "3")))).append("then", 3),
+                                // Gestione formato "fourStar" O "4"
+                                new Document("case", new Document("$in", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), Arrays.asList("fourStar", "4")))).append("then", 4),
+                                // Gestione formato "fiveStar" O "5"
+                                new Document("case", new Document("$in", Arrays.asList(new Document("$arrayElemAt", Arrays.asList("$past_trips.hotels.hotelStars", 0)), Arrays.asList("fiveStar", "5")))).append("then", 5)
                         )).append("default", 0)))),
 
                 new Document("$match", new Document("starValue", new Document("$gt", 0))), // Escludi i viaggi senza hotel
@@ -197,6 +210,7 @@ public class TravellerService {
     }
 
     private String analyzeTrend(List<Integer> stars) {
+
 
         if (stars == null || stars.isEmpty()) {
             return "DATI INSUFFICIENTI";
