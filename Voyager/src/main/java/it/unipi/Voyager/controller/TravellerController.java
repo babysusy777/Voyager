@@ -1,12 +1,15 @@
 package it.unipi.Voyager.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import it.unipi.Voyager.dto.TravelHabitDTO;
 import it.unipi.Voyager.dto.TravellerConfigRequest;
 import it.unipi.Voyager.dto.TripFrequencyDTO;
+import it.unipi.Voyager.dto.RecommendationDTO;
 import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.dto.TravellerSegmentDTO;
 import it.unipi.Voyager.model.graph.TravellerNode;
 import it.unipi.Voyager.repository.TravellerRepository;
+import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import it.unipi.Voyager.service.TravellerService;
 import it.unipi.Voyager.service.graph.RecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +32,12 @@ public class TravellerController {
     @Autowired
     private RecommendationService recommendationService;
 
+    @Autowired
+    private TravellerGraphRepository travellerGraphRepository;
+
+    @Operation(summary = "Configure traveller's preferences",
+            description = "travelType value: RELAX, ADVENTURE, CULTURAL, BUSINESS, FAMILY, NIGHTLIFE \n" +
+                    "budget value: low, medium, high")
     @PostMapping("/configure")
     public ResponseEntity<?> saveTravellerConfiguration(@RequestBody TravellerConfigRequest request) {
         try {
@@ -74,12 +83,26 @@ public class TravellerController {
      * Restituisce la lista dei viaggiatori più simili all'utente loggato.
      */
     @GetMapping("/similar-friends")
-    public ResponseEntity<List<TravellerNode>> getSimilarTravellers(java.security.Principal principal) {
-        List<TravellerNode> similarOnes = recommendationService.getSuggestions(principal.getName());
+    public ResponseEntity<List<TravellerNode>> getSimilarTravellers(@RequestParam String email) {
+        List<TravellerNode> similarOnes = recommendationService.getSuggestions(email);
 
         if (similarOnes.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(similarOnes);
     }
+
+    /**
+     * Recommendation
+     */
+    @GetMapping("/recommendations")
+    public ResponseEntity<List<RecommendationDTO>> getRecommendations(@RequestParam String email) {
+        travellerGraphRepository.computeAndSaveSimilarity(email);
+        List<RecommendationDTO> recommendations = travellerGraphRepository.getPersonalizedRecommendations(email);
+        if (recommendations.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(recommendations);
+    }
+
 }

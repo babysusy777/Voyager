@@ -1,5 +1,8 @@
 package it.unipi.Voyager.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+import it.unipi.Voyager.model.TravelType;
+
 public class TravellerConfigRequest {
 
     private String email;
@@ -10,7 +13,9 @@ public class TravellerConfigRequest {
     // Preferences
     private String budget;
     private String season;
-    private String travelType;
+
+    @Schema(allowableValues = {"RELAX", "ADVENTURE", "CULTURAL", "BUSINESS", "FAMILY", "NIGHTLIFE"})
+    private TravelType travelType;
 
     // Getters & Setters
     public String getEmail() { return email; }
@@ -30,6 +35,6 @@ public class TravellerConfigRequest {
 
     public String getSeason() { return season; }
     public void setSeason(String season) { this.season = season; }
-    public String getTravelType() { return travelType; }
-    public void setTravelType(String travelType) { this.travelType = travelType; }
+    public TravelType getTravelType() { return travelType; }
+    public void setTravelType(TravelType travelType) { this.travelType = travelType; }
 }

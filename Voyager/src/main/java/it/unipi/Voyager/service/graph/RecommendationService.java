@@ -17,7 +17,8 @@ public class RecommendationService {
         travellerGraphRepository.computeAndSaveSimilarity(travellerId);
     }
 
-    public List<TravellerNode> getSuggestions(String travellerId) {
-        return travellerGraphRepository.findTopSimilarTravellers(travellerId);
+    public List<TravellerNode> getSuggestions(String email) {
+        travellerGraphRepository.computeAndSaveSimilarity(email);
+        return travellerGraphRepository.findTopSimilarTravellers(email);
     }
 }

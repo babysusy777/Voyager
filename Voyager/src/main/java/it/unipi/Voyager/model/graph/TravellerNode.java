@@ -12,17 +12,14 @@ public class TravellerNode {
 
 
     //private String userId;
-
     @Id
     private String email;
-
     private int age;
     private String gender;
-
     private String userSegment;
     private String travelType;
-
-    private Traveller.Preferences preferences;
+    private String preferencesBudget;
+    private String preferencesSeason;
 
     // Relazione: (Traveller)-[:MADE_TRIP]->(Trip)
     @Relationship(type = "MADE_TRIP", direction = Relationship.Direction.OUTGOING)
@@ -46,12 +43,15 @@ public class TravellerNode {
     public String getGender() { return gender; }
     public void setGender(String gender) { this.gender = gender; }
 
-
     public String getUserSegment() { return userSegment; }
     public void setUserSegment(String userSegment) { this.userSegment = userSegment; }
 
-    public Traveller.Preferences getPreferences() { return preferences; }
-    public void setPreferences(Traveller.Preferences preferences) { this.preferences = preferences; }
+    public void setPreferencesBudget(String preferencesBudget) { this.preferencesBudget = preferencesBudget;}
+
+    public void setPreferencesSeason(String preferencesSeason) {this.preferencesSeason = preferencesSeason;}
+    public String getPreferencesSeason() {return preferencesSeason;}
+
+    public void setTravelType(String travelType) {this.travelType = travelType;}
 
     public List<TripNode> getTrips() { return trips; }
     public void setTrips(List<TripNode> trips) { this.trips = trips; }

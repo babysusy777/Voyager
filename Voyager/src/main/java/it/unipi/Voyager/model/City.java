@@ -33,9 +33,6 @@ public class City {
     @Field("other_hotel_ids")
     private List<String> otherHotelIds;
 
-    @Field("top_attractions")
-    private List<AttractionSummary> topAttractions;
-
     public static class Seasonality {
         private int spring;
         private int summer;
@@ -156,8 +153,5 @@ public class City {
 
     public List<String> getOtherHotelIds() { return otherHotelIds; }
     public void setOtherHotelIds(List<String> otherHotelIds) { this.otherHotelIds = otherHotelIds; }
-
-    public List<AttractionSummary> getTopAttractions() { return topAttractions; }
-    public void setTopAttractions(List<AttractionSummary> topAttractions) { this.topAttractions = topAttractions; }
 
 }

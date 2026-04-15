@@ -53,6 +53,8 @@ public class Traveller {
 
         public String getSeason() { return season; }
         public void setSeason(String season) { this.season = season; }
+        public String getTravelType() { return travelType; }
+        public void setTravelType(String travelType) { this.travelType = travelType; }
     }
 
 

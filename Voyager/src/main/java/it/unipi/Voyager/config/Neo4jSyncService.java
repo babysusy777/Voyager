@@ -142,12 +142,23 @@ public class Neo4jSyncService {
         node.setGender(tDoc.getString("gender"));
         node.setUserSegment(tDoc.getString("user_segment"));
 
+        // Preferences
+        Document prefs = tDoc.get("preferences", Document.class);
+        if (prefs != null) {
+            node.setPreferencesBudget(prefs.getString("budget"));
+            node.setPreferencesSeason(prefs.getString("season"));
+            node.setTravelType(tDoc.getString("travel_type"));
+        }
+
         // MADE_TRIP + STAYED_AT
         List<TripNode> tripNodes = new ArrayList<>();
         List<Document> trips = tDoc.getList("past_trips", Document.class);
         if (trips != null) {
             for (Document t : trips) {
-                String hotelName = t.getString("hotel_name");
+                List<Document> hotels = t.getList("hotels", Document.class);
+                String hotelName = (hotels != null && !hotels.isEmpty())
+                        ? hotels.get(0).getString("hotelName")
+                        : null;
 
                 HotelNode hotelNode = (hotelName != null)
                         ? hotelGraphRepository.findByHotelName(hotelName).orElse(null)

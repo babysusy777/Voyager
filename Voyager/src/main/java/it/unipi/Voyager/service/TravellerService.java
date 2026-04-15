@@ -44,7 +44,10 @@ public class TravellerService {
         Traveller.Preferences preferences = new Traveller.Preferences();
         preferences.setBudget(request.getBudget());
         preferences.setSeason(request.getSeason());
-        prefs.setTravelType(request.getTravelType());
+        if (request.getTravelType() != null) {
+            // .name() trasforma l'Enum (es. ADVENTURE) in stringa "ADVENTURE"
+            preferences.setTravelType(request.getTravelType().name());
+        }
         traveller.setPreferences(preferences);
 
         Traveller saved = travellerRepository.save(traveller);
