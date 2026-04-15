@@ -90,40 +90,45 @@ public class HostController {
             default          -> 0;
         };
     }
-
+//non riesco a far modificare l'hotel nella città
     @PutMapping("/update-hotel")
     public ResponseEntity<?> updateHotelInformation(@RequestBody HostHotelUpdateRequest request) {
         try {
-            // 1. Verifica che l'host esista
+            // 1. Trova l'hotel per Nome e Città
+            Hotel hotel = hotelRepository.findByHotelNameAndCityName(request.getHotelName(), request.getCityName())
+                    .orElseThrow(() -> new RuntimeException("Hotel not found in this city"));
+
+            // 2. Verifica che l'host esista e possieda questo specifico ID hotel
             Host host = hostRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("Host not found"));
 
-            // 2. Verifica che l'hotel appartenga all'host
             boolean owns = host.getHotels() != null && host.getHotels().stream()
-                    .anyMatch(h -> h.getHotelId().equals(request.getHotelId()));
+                    .anyMatch(h -> h.getHotelId().equals(hotel.getId()));
+
             if (!owns) {
-                return ResponseEntity.status(403).body("Hotel not owned by this host");
+                return ResponseEntity.status(403).body("Host couldn't modify this hotel");
             }
 
-            // 3. Trova e aggiorna il documento Hotel
-            Hotel hotel = hotelRepository.findById(request.getHotelId())
-                    .orElseThrow(() -> new RuntimeException("Hotel not found"));
-
+            // 3. Aggiorna i dati nel documento Hotel
             if (request.getAveragePrice() != null) hotel.setAveragePrice(request.getAveragePrice());
             if (request.getDescription() != null)  hotel.setDescription(request.getDescription());
             if (request.getFacilities() != null)   hotel.setFacilities(request.getFacilities());
+
             if (request.getHotelRating() != null) {
                 hotel.setHotelRating(request.getHotelRating());
 
-                // 4. Aggiorna anche le stelle nella HotelReference embedded nell'host
+                // 4. Update Partial Embedding nell'HOST
                 host.getHotels().stream()
-                        .filter(h -> h.getHotelId().equals(request.getHotelId()))
+                        .filter(h -> h.getHotelId().equals(hotel.getId()))
                         .findFirst()
                         .ifPresent(h -> h.setStars(parseStars(request.getHotelRating())));
                 hostRepository.save(host);
+
             }
 
             hotelRepository.save(hotel);
+
+            // 6. Sincronizzazione Neo4j
             neo4jSyncService.syncHotelByName(hotel.getHotelName(), hotel.getCityName());
 
             return ResponseEntity.ok("Hotel updated successfully");
@@ -133,6 +138,8 @@ public class HostController {
         }
     }
 
+
+/*
 
     // VERSIONE CON LOOKUP
     @GetMapping("/{username}/visibility-gap")
@@ -146,12 +153,12 @@ public class HostController {
         }
 
         return ResponseEntity.ok(report);
-    }
+    } */
 
     // VERSIONE CON CAMPO PRECALCOLATO
-    @GetMapping("/{username}/gap-simple")
-    public ResponseEntity<List<VisibilityGapDTO>> getGapSimple(@PathVariable String username) {
-        List<VisibilityGapDTO> report = hostService.getGapSimple(username);
+    @GetMapping("/{email}/gap-simple")
+    public ResponseEntity<List<VisibilityGapDTO>> getGapSimple(@PathVariable String email) {
+        List<VisibilityGapDTO> report = hostService.getGapSimple(email);
 
         if (report.isEmpty()) {
             return ResponseEntity.noContent().build();

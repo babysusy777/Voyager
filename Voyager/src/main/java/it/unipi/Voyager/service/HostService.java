@@ -90,9 +90,9 @@ public class HostService {
     }
 
     // VERSIONE CAMPO PRECALCOLATO
-    public List<VisibilityGapDTO> getGapSimple(String username) {
+    public List<VisibilityGapDTO> getGapSimple(String email) {
         // 1. Recupero l'host (Plain Language)
-        Document hostFilter = new Document("username", username);
+        Document hostFilter = new Document("email", email);
         Document hostDoc = mongoTemplate.getCollection("hosts").find(hostFilter).first();
 
         if (hostDoc == null) return Collections.emptyList();
@@ -102,15 +102,19 @@ public class HostService {
         if (hotelRefs == null) return Collections.emptyList();
 
         return hotelRefs.stream().map(ref -> {
-            Object hotelId = ref.get("hotel_id");
+            // Recuperiamo i dati dal riferimento (Partial Embedding)
+            String hName = ref.getString("hotel_name");
+            String hCity = ref.getString("city");
 
-            // 3. Query puntuale per l'hotel (Plain Language)
+            // 3. Query usando Nome e Città invece dell'ID
             Document hotelDoc = mongoTemplate.getCollection("hotels")
-                    .find(new Document("_id", hotelId))
+                    .find(new Document("HotelName", hName).append("cityName", hCity))
                     .first();
 
-            if (hotelDoc == null) return null;
-
+            if (hotelDoc == null) {
+                System.out.println("DEBUG: Hotel not found " + hName + " in " + hCity);
+                return null;
+            }
             // 4. Estrazione dati dai documenti annidati
             Document stats = (Document) hotelDoc.get("guestStats");
 
@@ -129,8 +133,8 @@ public class HostService {
 
             // 5. Costruttore DTO: ordine sincronizzato con il file DTO
             return new VisibilityGapDTO(
-                    name,        // hotelName
-                    city,        // city
+                    hName,        // hotelName
+                    hCity,        // city
                     category,    // category
                     totalVisits, // actualVisits (int)
                     avgVisits,   // averagePeerVisits (double)

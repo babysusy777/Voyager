@@ -5,7 +5,8 @@ import java.util.List;
 public class HostHotelUpdateRequest {
 
     private String email;       // identifica l'host
-    private String hotelId;     // identifica l'hotel da modificare
+    private String hotelName;
+    private String cityName;   // identifica l'hotel da modificare
     private Double averagePrice;
     private String description;
     private List<String> facilities;
@@ -15,8 +16,11 @@ public class HostHotelUpdateRequest {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public String getHotelId() { return hotelId; }
-    public void setHotelId(String hotelId) { this.hotelId = hotelId; }
+    public String getHotelName() { return hotelName; }
+    public void setHotelName(String hotelName) { this.hotelName = hotelName; }
+
+    public String getCityName() { return cityName; }
+    public void setcityName(String cityName) { this.cityName = cityName; }
 
     public Double getAveragePrice() { return averagePrice; }
     public void setAveragePrice(Double averagePrice) { this.averagePrice = averagePrice; }
