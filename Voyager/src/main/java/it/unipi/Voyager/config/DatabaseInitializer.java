@@ -49,7 +49,6 @@ public class DatabaseInitializer {
         // Step 4: segment_distribution + preference_distribution su ogni hotel (dipende da Step 3)
         populateSegmentAndPreferenceDistribution();
         populateCitySeasonality();
-        populateTravelTypes();
         // Step 5: calcola travelType su tutti i nodi Traveller in Neo4j
         populateTravelTypes();
     }

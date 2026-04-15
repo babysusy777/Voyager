@@ -21,7 +21,10 @@ public class Traveller {
     private String gender;
     private String email;
     private int age;
+
+    @Field("user_segment")
     private String userSegment;
+
     private String country;
     private String password;
     private Preferences preferences;

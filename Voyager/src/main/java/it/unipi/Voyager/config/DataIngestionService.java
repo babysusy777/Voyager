@@ -51,7 +51,7 @@ public class DataIngestionService {
                     new com.mongodb.client.model.IndexOptions().unique(true)
             );
 
-            InputStream is = new ClassPathResource("hotel_ai_pricing.json").getInputStream();
+            InputStream is = new ClassPathResource("hotel_ridotto.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
 
@@ -159,7 +159,7 @@ public class DataIngestionService {
             return;
         }
         try {
-            InputStream is = new ClassPathResource("users.json").getInputStream();
+            InputStream is = new ClassPathResource("users_ridotto.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
 
@@ -222,7 +222,7 @@ public class DataIngestionService {
             );
             System.out.println("[Ingestion] Indice univoco su cityName creato.");
 
-            InputStream is = new ClassPathResource("city_final.json").getInputStream();
+            InputStream is = new ClassPathResource("city_ridotto.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
 
