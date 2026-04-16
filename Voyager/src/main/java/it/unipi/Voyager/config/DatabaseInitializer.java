@@ -439,12 +439,14 @@ public class DatabaseInitializer {
                                 .append("peak_season", "$peak_season")
                                 .append("concentration_ratio", "$concentration_ratio")
                         )
+                        .append("new_total_visits", "$total")
                 ),
 
                 new Document("$merge", new Document("into", "cities")
                         .append("on", "cityName")
                         .append("whenMatched", Arrays.asList(
                                 new Document("$set", new Document("seasonality", "$$new.seasonality"))
+
                         ))
                         .append("whenNotMatched", "discard")
                 )

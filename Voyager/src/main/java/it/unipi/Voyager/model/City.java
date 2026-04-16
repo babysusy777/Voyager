@@ -101,7 +101,7 @@ public class City {
 
     }
 
-    public static class AttractionSummary {
+   /* public static class AttractionSummary {
         //@Field("attraction_id")
         //private String attractionId;
 
@@ -124,7 +124,7 @@ public class City {
 
         public double getCentralityScore() { return centralityScore; }
         public void setCentralityScore(double centralityScore) { this.centralityScore = centralityScore; }
-    }
+    }*/
 
     // ─── Getters & Setters (City) ─────────────────────────────────
 

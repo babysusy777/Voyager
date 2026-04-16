@@ -28,7 +28,7 @@ public class HostService {
     @Autowired
     private HostRepository hostRepository;
 
-    // VERSIONE CON LOOKUP
+   /* // VERSIONE CON LOOKUP
     public List<VisibilityGapDTO> getHostVisibilityGap(String username) {
 
         List<Document> pipeline = Arrays.asList(
@@ -87,7 +87,7 @@ public class HostService {
         return results.stream()
                 .map(doc -> mongoTemplate.getConverter().read(VisibilityGapDTO.class, doc))
                 .collect(Collectors.toList());
-    }
+    }*/
 
     // VERSIONE CAMPO PRECALCOLATO
     public List<VisibilityGapDTO> getGapSimple(String email) {

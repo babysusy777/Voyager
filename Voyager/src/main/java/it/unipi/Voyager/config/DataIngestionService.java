@@ -299,7 +299,7 @@ public class DataIngestionService {
                 doc.append("other_hotel_ids", otherHotelIds);
 
                 // 3. Altri campi
-                doc.append("top_attractions", new ArrayList<>());
+
                 doc.append("city_index", new Document("total_visits", 0).append("hotel_count", allHotelsInCity.size()));
 
                 docs.add(doc);
