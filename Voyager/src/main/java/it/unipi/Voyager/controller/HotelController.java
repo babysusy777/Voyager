@@ -19,23 +19,23 @@ public class HotelController {
     @Autowired
     private HotelRepository hotelRepository;
 
-    // Per la versione con campo precalcolato
-    @PostMapping("/host/refresh-averages")
-    public ResponseEntity<String> refreshCityCategoryAverages(
-            @RequestParam String city,
-            @RequestParam String rating) {
-
-        try {
-
-            hotelService.updateCityCategoryAvgVisits(city, rating);
-
-            return ResponseEntity.ok("Aggiornamento completato con successo per " + city + " (" + rating + ").");
-        } catch (Exception e) {
-            // Gestione errore generico
-            return ResponseEntity.internalServerError()
-                    .body("Errore durante l'aggiornamento: " + e.getMessage());
-        }
-    }
+//    // Per la versione con campo precalcolato
+//    @PostMapping("/host/refresh-averages")
+//    public ResponseEntity<String> refreshCityCategoryAverages(
+//            @RequestParam String city,
+//            @RequestParam String rating) {
+//
+//        try {
+//
+//            hotelService.updateCityCategoryAvgVisits(city, rating);
+//
+//            return ResponseEntity.ok("Aggiornamento completato con successo per " + city + " (" + rating + ").");
+//        } catch (Exception e) {
+//            // Gestione errore generico
+//            return ResponseEntity.internalServerError()
+//                    .body("Errore durante l'aggiornamento: " + e.getMessage());
+//        }
+//    }
 
     @GetMapping("/search")
     public ResponseEntity<HotelSearchDTO> getHotelByNameAndCityName(@RequestParam String hotelName, @RequestParam String cityName) {

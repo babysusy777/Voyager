@@ -1,10 +1,11 @@
 package it.unipi.Voyager.dto;
 
-/**
- * Data Transfer Object per l'analisi Demand vs Supply della città.
- * Ottimizzato per riflettere l'uso del Compound Index (City + Rating).
- */
+import org.springframework.data.mongodb.core.mapping.Field;
+
+
 public class CityIndexDTO {
+
+    @Field("cityName")
     private String cityName;
     private int hotelCount;
     private int totalCityVisits;
@@ -15,7 +16,7 @@ public class CityIndexDTO {
 
     public String getCityName() { return cityName; }
     public void setCityName(String cityName) { this.cityName = cityName; }
-    
+
     public int getHotelCount() { return hotelCount; }
     public void setHotelCount(int hotelCount) { this.hotelCount = hotelCount; }
 

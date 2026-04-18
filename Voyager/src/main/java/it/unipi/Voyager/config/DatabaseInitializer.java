@@ -7,6 +7,11 @@ import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -42,6 +47,7 @@ public class DatabaseInitializer {
 
         // Step 1: totalVisits + seasonality.counts su ogni hotel
         populateGuestStats();
+        updateCityIndexes();
         // Step 2: city_category_avg_visits (dipende da Step 1)
         populateCityCategoryAvgVisits();
         // Step 3: calcola user_segment e lo salva su ogni traveller
@@ -51,6 +57,44 @@ public class DatabaseInitializer {
         populateCitySeasonality();
         // Step 5: calcola travelType su tutti i nodi Traveller in Neo4j
         populateTravelTypes();
+    }
+
+    private void updateCityIndexes() {
+        System.out.println("[Init] Sincronizzazione totalVisits nelle città...");
+
+        // 1. Prendi tutti i nomi delle città che hai nel DB degli hotel
+        List<String> cities = mongoTemplate.getCollection("hotels")
+                .distinct("cityName", String.class)
+                .into(new ArrayList<>());
+
+        for (String cityName : cities) {
+            // 2. Chiedi a MongoDB: "Somma tutti i totalVisits degli hotel di questa città"
+            Aggregation agg = Aggregation.newAggregation(
+                    Aggregation.match(Criteria.where("cityName").is(cityName)),
+                    Aggregation.group("cityName")
+                            .count().as("hotelCount")
+                            .sum("guestStats.totalVisits").as("totalVisits")
+            );
+
+            AggregationResults<Document> results = mongoTemplate.aggregate(agg, "hotels", Document.class);
+            Document res = results.getUniqueMappedResult();
+
+            if (res != null) {
+                int total = res.getInteger("totalVisits", 0);
+                int count = res.getInteger("hotelCount", 0);
+                double ratio = (count > 0) ? (double) total / count : 0.0;
+
+                // 3. Vai nella collezione "cities" e scrivi i valori reali
+                Query query = new Query(Criteria.where("cityName").is(cityName));
+                Update update = new Update()
+                        .set("city_index.total_visits", total)
+                        .set("city_index.hotel_count", count)
+                        .set("city_index.demand_ratio", ratio);
+
+                mongoTemplate.updateFirst(query, update, "cities");
+            }
+        }
+        System.out.println("[Init] City Index aggiornato con successo.");
     }
 
     private void populateGuestStats() {

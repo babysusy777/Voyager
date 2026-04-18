@@ -26,6 +26,9 @@ public class City {
     @Field("best_time_to_visit")
     private String bestTimeToVisit;
 
+    @Field("city_index")
+    private CityIndex cityIndex;
+
     private Seasonality seasonality;
 
     @Field("top_value_hotels")
@@ -67,13 +70,24 @@ public class City {
 
     public static class CityIndex {
 
+        @Field("total_visits")
+        private int totalVisits;
+
+        @Field("hotel_count")
+        private int hotelCount;
+
         @Field("demand_ratio")
-        private double demandVsSupplyRatio;
+        private double demandRatio;
 
         // Getters & Setters
+        public int getTotalVisits() { return totalVisits; }
+        public void setTotalVisits(int totalVisits) { this.totalVisits = totalVisits; }
 
-        public double getDemandRatio() { return demandVsSupplyRatio; }
-        public void setDemandRatio(double demandVsSupplyRatio) { this.demandVsSupplyRatio = demandVsSupplyRatio; }
+        public int getHotelCount() { return hotelCount; }
+        public void setHotelCount(int hotelCount) { this.hotelCount = hotelCount; }
+
+        public double getDemandRatio() { return demandRatio; }
+        public void setDemandRatio(double demandRatio) { this.demandRatio = demandRatio; }
     }
 
     public static class HotelSummary { // Partial Embedding
@@ -143,6 +157,9 @@ public class City {
 
     public String getSafety() { return safety; }
     public void setSafety(String safetyIndex) { this.safety = safety; }
+
+    public CityIndex getCityIndex() { return cityIndex; }
+    public void setCityIndex(CityIndex cityIndex) { this.cityIndex = cityIndex; }
 
     public Seasonality getSeasonality() { return seasonality; }
     public void setSeasonality(Seasonality seasonality) { this.seasonality = seasonality; }

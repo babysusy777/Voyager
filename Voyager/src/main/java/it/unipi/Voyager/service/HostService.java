@@ -118,7 +118,7 @@ public class HostService {
             // 4. Estrazione dati dai documenti annidati
             Document stats = (Document) hotelDoc.get("guestStats");
 
-            String name = hotelDoc.getString("hotelName");
+            String name = hotelDoc.getString("HotelName");
             String city = hotelDoc.getString("cityName");
             String category = hotelDoc.getString("HotelRating");
 
@@ -126,8 +126,8 @@ public class HostService {
             int totalVisits = (stats != null && stats.get("totalVisits") != null)
                     ? stats.getInteger("totalVisits") : 0;
 
-            double avgVisits = (stats != null && stats.get("cityCategoryAvgVisits") != null)
-                    ? stats.getDouble("cityCategoryAvgVisits") : 0.0;
+            double avgVisits = (stats != null && stats.getDouble("city_category_avg_visits") != null)
+                    ? stats.getDouble("city_category_avg_visits") : 0.0;
 
             double gap = totalVisits - avgVisits;
 

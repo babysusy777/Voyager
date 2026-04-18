@@ -4,7 +4,7 @@ public class VisibilityGapDTO {
     private String hotelName;
     private String city;
     private String category;
-    private int actualVisits;
+    private int totalVisits;
     private double averagePeerVisits;
     private double gap;
 
@@ -14,7 +14,7 @@ public class VisibilityGapDTO {
         this.hotelName = hotelName;
         this.city = city;
         this.category = category;
-        this.actualVisits = actualVisits;
+        this.totalVisits = totalVisits;
         this.averagePeerVisits = averagePeerVisits;
         this.gap = gap;
     }
@@ -23,7 +23,7 @@ public class VisibilityGapDTO {
     public String getHotelName() { return hotelName; }
     public String getCity() { return city; }
     public String getCategory() { return category; }
-    public int getActualVisits() { return actualVisits; }
+    public int getTotalVisits() { return totalVisits; }
     public double getAveragePeerVisits() { return averagePeerVisits; }
     public double getGap() { return gap; }
     // ... setter omessi per brevità

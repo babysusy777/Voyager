@@ -81,6 +81,7 @@ public class Hotel {
     // --- CLASSI INTERNE PER STATISTICHE (Writeback) ---
 
     public static class GuestStats {
+
         private int totalVisits;
         private SeasonStats seasonality;
         private SegmentDistribution segmentDistribution;
