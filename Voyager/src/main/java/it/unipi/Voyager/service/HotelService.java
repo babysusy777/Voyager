@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -61,10 +62,11 @@ public class HotelService {
         return hotelRepository.getFacilitiesGap(
                 hotel.getCityName(),
                 hotel.getHotelRating(),
-                4.3,
+                hotel.getHotelName(),
                 hotel.getFacilities()
         );
     }
+
     public CityIndexDTO getCityIndex(String cityName) {
         // Chiamata diretta alla repository con il parametro di filtro
         CityIndexDTO index = hotelRepository.getCityIndex(cityName);

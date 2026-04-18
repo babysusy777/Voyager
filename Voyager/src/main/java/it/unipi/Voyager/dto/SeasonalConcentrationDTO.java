@@ -3,8 +3,7 @@ package it.unipi.Voyager.dto;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 public class SeasonalConcentrationDTO {
-    @Field("hotelName")
-    private String hotelName;
+    private String HotelName;
 
     @Field("peakSeason")
     private String peakSeason;
@@ -15,15 +14,10 @@ public class SeasonalConcentrationDTO {
     @Field("riskLabel")
     private String riskLabel;
 
-    public SeasonalConcentrationDTO(String hotelName, String peakSeason, double concentrationRatio, String riskLabel) {
-        this.hotelName = hotelName;
-        this.peakSeason = peakSeason;
-        this.concentrationRatio = concentrationRatio;
-        this.riskLabel = riskLabel;
-    }
+    public SeasonalConcentrationDTO() {}
 
-    public String getHotelName() { return hotelName; }
-    public void setHotelName(String hotelName) { this.hotelName = hotelName; }
+    public String getHotelName() { return HotelName; }
+    public void setHotelName(String HotelName) { this.HotelName = HotelName; }
 
     public String getPeakSeason() { return peakSeason; }
     public void setPeakSeason(String peakSeason) { this.peakSeason = peakSeason; }

@@ -21,7 +21,7 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
             "{ $match: { _id: { $in: ?0 } } }",  // ← stage dedicato
             """
             { $project: {
-                hotelName: '$HotelName',
+                HotelName: '$HotelName',
                 sp: { $ifNull: ['$guestStats.seasonality.counts.spring', 0] },
                 su: { $ifNull: ['$guestStats.seasonality.counts.summer', 0] },
                 au: { $ifNull: ['$guestStats.seasonality.counts.autumn', 0] },
@@ -49,7 +49,8 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
             """,
             """
             { $project: {
-                hotelName: 1,
+                 _id: 0,
+                HotelName: 1,
                 peakSeason: 1,
                 concentrationRatio: 1,
                 riskLabel: { $switch: { branches: [
@@ -63,11 +64,12 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
     List<SeasonalConcentrationDTO> getSeasonalConcentrationByIds(List<ObjectId> hotelIds);
 
     @Aggregation(pipeline = {
-            "{ $match: { cityName: ?0, HotelRating: ?1, 'guestStats.avgRatingGiven': { $gte: ?2 } } }",
-            "{ $group: { _id: null, peer_facilities: { $addToSet: '$HotelFacilities' } } }",
-            "{ $project: { missing: { $setDifference: ['$peer_facilities', ?3] } } }"
+            "{ $match: { cityName: ?0, HotelRating: ?1, HotelName: { $ne: ?2 } } }",
+            "{ $unwind: '$HotelFacilities' }",
+            "{ $group: { _id: null, peerFacilities: { $addToSet: '$HotelFacilities' } } }",
+            "{ $project: { _id: 0, missing: { $setDifference: ['$peerFacilities', ?3] } } }"
     })
-    FacilitiesGapDTO getFacilitiesGap(String city, String rating, double minRating, List<String> myFacilities);
+    FacilitiesGapDTO getFacilitiesGap(String city, String rating, String hotelName, List<String> myFacilities);
 
     @Aggregation(pipeline = {
             "{ $match: { 'cityName': ?0 } }",
