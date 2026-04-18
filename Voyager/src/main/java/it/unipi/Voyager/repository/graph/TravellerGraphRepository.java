@@ -17,19 +17,24 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
     //and that visited the same cities (medium weight), or same hotels (heavy weight)
 
     @Query("""
-        MATCH (t1:Traveller {email: $email}), (t2:Traveller)
-        WHERE t1 <> t2
-        WITH t1, t2,
-            (CASE WHEN t1.preferencesSeason = t2.preferencesSeason THEN 1 ELSE 0 END +
-             CASE WHEN t1.preferencesBudget = t2.preferencesBudget THEN 1 ELSE 0 END +
-             CASE WHEN t1.travelType = t2.travelType AND t1.travelType IS NOT NULL THEN 1 ELSE 0 END) AS profileScore
-        OPTIONAL MATCH (t1)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(h:Hotel)<-[:STAYED_AT]-(:Trip)<-[:MADE_TRIP]-(t2)
-        WITH t1, t2, profileScore, count(DISTINCT h) AS hotelScore
-        WITH t1, t2, (profileScore * 1 + hotelScore * 4) AS finalScore
-        WHERE finalScore > 2
-        MERGE (t1)-[s:SIMILAR_TO]->(t2)
-        SET s.score = finalScore
-    """)
+    MATCH (t1:Traveller {email: $email}), (t2:Traveller)
+    WHERE t1 <> t2
+    WITH t1, t2,
+        (CASE WHEN t1.preferencesSeason = t2.preferencesSeason THEN 1 ELSE 0 END +
+         CASE WHEN t1.preferencesBudget = t2.preferencesBudget THEN 1 ELSE 0 END +
+         CASE WHEN t1.travelType = t2.travelType AND t1.travelType IS NOT NULL THEN 1 ELSE 0 END +
+         // Calcolo differenza età: se <= 5 aggiunge 0.5
+         CASE WHEN abs(t1.age - t2.age) <= 5 THEN 0.5 ELSE 0 END) AS profileScore
+    
+    OPTIONAL MATCH (t1)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(h:Hotel)<-[:STAYED_AT]-(:Trip)<-[:MADE_TRIP]-(t2)
+    
+    WITH t1, t2, profileScore, count(DISTINCT h) AS hotelScore
+    WITH t1, t2, (profileScore * 1 + hotelScore * 4) AS finalScore
+    WHERE finalScore > 2
+    
+    MERGE (t1)-[s:SIMILAR_TO]->(t2)
+    SET s.score = finalScore
+""")
     void computeAndSaveSimilarity(String email);
 
     // Query per ottenere i primi 10 simili
