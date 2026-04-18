@@ -105,17 +105,16 @@ public class HostService {
         return hotelRefs.stream().map(ref -> {
             // Recuperiamo i dati dal riferimento (Partial Embedding)
             String hotelId = ref.getString("hotel_id");
-            if (hotelId == null) return null;
 
-            // 3. Query usando Nome e Città invece dell'ID
             Document hotelDoc = mongoTemplate.getCollection("hotels")
                     .find(new Document("_id", new ObjectId(hotelId)))
                     .first();
 
-            if (hotelDoc == null) {
-                System.out.println("DEBUG: Hotel not found for id " + hotelId);
-                return null;
+            if (hotelDoc != null) {
+                Document stats = (Document) hotelDoc.get("guestStats");
+                System.out.println("DEBUG totalVisits: " + (stats != null ? stats.get("totalVisits") : "stats null"));
             }
+
             // 4. Estrazione dati dai documenti annidati
             Document stats = (Document) hotelDoc.get("guestStats");
 
@@ -124,8 +123,13 @@ public class HostService {
             String category = hotelDoc.getString("HotelRating");
 
             // Gestione tipi: actualVisits è int nel DTO, cityCategoryAvgVisits è double nel DB
-            int totalVisits = (stats != null && stats.get("totalVisits") != null)
-                    ? stats.getInteger("totalVisits") : 0;
+            int totalVisits = 0;
+            if (stats != null && stats.get("totalVisits") != null) {
+                Object raw = stats.get("totalVisits");
+                if (raw instanceof Integer) totalVisits = (Integer) raw;
+                else if (raw instanceof Long) totalVisits = ((Long) raw).intValue();
+                else if (raw instanceof Double) totalVisits = ((Double) raw).intValue();
+            }
 
             double avgVisits = (stats != null && stats.getDouble("city_category_avg_visits") != null)
                     ? stats.getDouble("city_category_avg_visits") : 0.0;
@@ -161,4 +165,16 @@ public class HostService {
     }
 
 
-}
+        public void removeHotelReferenceFromHost(String email, String hotelId) {
+            Host host = hostRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Host not found"));
+
+            if (host.getHotels() != null) {
+                // Rimuove l'hotelId corrispondente dalla lista dei riferimenti
+                host.getHotels().removeIf(ref -> ref.getHotelId().equals(hotelId));
+                hostRepository.save(host);
+            }
+        }
+    }
+
+

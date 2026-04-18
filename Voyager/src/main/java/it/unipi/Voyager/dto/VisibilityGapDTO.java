@@ -14,7 +14,7 @@ public class VisibilityGapDTO {
         this.hotelName = hotelName;
         this.city = city;
         this.category = category;
-        this.totalVisits = totalVisits;
+        this.totalVisits = actualVisits;  // ← era totalVisits, che è 0 perché non inizializzato
         this.averagePeerVisits = averagePeerVisits;
         this.gap = gap;
     }

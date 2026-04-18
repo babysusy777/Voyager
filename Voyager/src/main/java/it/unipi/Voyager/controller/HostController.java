@@ -6,6 +6,7 @@ import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
 import it.unipi.Voyager.dto.VisibilityGapDTO;
 import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.HotelRepository;
+import it.unipi.Voyager.service.CityService;
 import it.unipi.Voyager.service.HostService;
 import it.unipi.Voyager.service.graph.CityGraphService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,9 @@ public class HostController {
 
     @Autowired
     private Neo4jSyncService neo4jSyncService;
+
+    @Autowired
+    private CityService cityService;
 
     @PostMapping("/add-hotel")
     public ResponseEntity<?> addHotel(@RequestBody HostHotelRequest request) {
@@ -90,6 +94,8 @@ public class HostController {
             default          -> 0;
         };
     }
+
+    /*
     @PatchMapping("/{email}/hotels/{cityName}/{hotelName}")
     public ResponseEntity<?> patchHotel(
             @PathVariable String email,
@@ -105,7 +111,7 @@ public class HostController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore interno.");
         }
-    }
+    }*/
 
 //non riesco a far modificare l'hotel nella città
     @PutMapping("/update-hotel")
@@ -203,48 +209,34 @@ public class HostController {
         return ResponseEntity.ok(similarCities);
     }
 
-   /* @DeleteMapping("/delete-hotel")
+    @DeleteMapping("/delete-hotel")
     public ResponseEntity<?> deleteHotel(
             @RequestParam String email,
             @RequestParam String hotelName,
             @RequestParam String cityName) {
         try {
-            // 1. Trova l'hotel per Nome e Città per ottenere l'ID reale
+            // 1. Recupero l'hotel per trovare l'ID reale (fondamentale per pulire Host e City)
             Hotel hotel = hotelRepository.findByHotelNameAndCityName(hotelName, cityName)
-                    .orElseThrow(() -> new RuntimeException("Hotel not found in this city"));
+                    .orElseThrow(() -> new RuntimeException("Hotel non trovato in questa città"));
 
             String hotelId = hotel.getId();
 
-            // 2. Trova l'Host e verifica che possieda questo specifico hotel
-            Host host = hostRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("Host not found"));
+            // 2. Aggiorno l'Host (toglie il link nel profilo)
+            hostService.removeHotelReferenceFromHost(email, hotelId);
 
-            boolean owns = host.getHotels() != null && host.getHotels().stream()
-                    .anyMatch(h -> h.getHotelId().equals(hotelId));
+            // 3. Aggiorno la City (decrementa count e pulisce array ibridi)
+            cityService.removeHotelFromCityMetrics(cityName, hotelId, hotelName);
 
-            if (!owns) {
-                return ResponseEntity.status(403).body("Host doesn't own this hotel");
-            }
-
-            // 3. RIMOZIONE DA HOST (Partial Embedding)
-            host.getHotels().removeIf(h -> h.getHotelId().equals(hotelId));
-            hostRepository.save(host);
-
-            // 4. AGGIORNAMENTO CITY (Consistenza Strategia Ibrida)
-            // Usiamo i parametri che abbiamo già
-            updateCityAfterDeletion(cityName, hotelId, hotelName);
-
-            // 5. RIMOZIONE DA HOTELS (Collezione principale)
+            // 4. Elimino l'Hotel fisicamente dalla collezione principale
             hotelRepository.deleteById(hotelId);
 
-            // 6. SYNC NEO4J
-            neo4jSyncService.syncHotelDeletion(hotelName, cityName);
-
-            return ResponseEntity.ok("Hotel '" + hotelName + "' deleted correctly");
+            return ResponseEntity.ok("Hotel '" + hotelName + "' rimosso correttamente da tutti i sistemi.");
 
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore imprevisto.");
         }
-    }*/
+    }
 
 }

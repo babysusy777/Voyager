@@ -106,11 +106,11 @@ public class DatabaseInitializer {
                 // 1. Srotola i viaggi
                 new Document("$unwind", "$past_trips"),
 
-                // 2. Srotola la lista degli hotel (essendo ora un array hotels: [ { hotelName: ... } ])
-                new Document("$unwind", "$past_trips.hotels"),
-
-                // 3. Srotola la lista delle città (essendo ora city: [ 'Rome' ])
+                // 2. Srotola la lista delle città (essendo ora city: [ 'Rome' ])
                 new Document("$unwind", "$past_trips.city"),
+
+                // 3. Srotola la lista degli hotel (essendo ora un array hotels: [ { hotelName: ... } ])
+                new Document("$unwind", "$past_trips.hotels"),
 
                 // Raggruppa per coppia (hotelName, cityName)
                 new Document("$group", new Document("_id", new Document()
@@ -210,11 +210,12 @@ public class DatabaseInitializer {
                 // 1. Srotoliamo i viaggi
                 new Document("$unwind", "$past_trips"),
 
-                // 2. Srotoliamo le città (perché past_trips.city è un array)
+                // 2. Srotoliamo gli hotel (perché past_trips.hotels è un array)
+                new Document("$unwind", "$past_trips.hotels"),
+
+                // 3. Srotoliamo le città (perché past_trips.city è un array)
                 new Document("$unwind", "$past_trips.city"),
 
-                // 3. Srotoliamo gli hotel (perché past_trips.hotels è un array)
-                new Document("$unwind", "$past_trips.hotels"),
                 // --- NUOVO STEP: Conversione Stringa -> Numero ---
                 new Document("$addFields", new Document("numericStars",
                         new Document("$switch", new Document("branches", Arrays.asList(

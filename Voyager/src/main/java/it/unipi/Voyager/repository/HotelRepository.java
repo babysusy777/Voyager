@@ -18,51 +18,47 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
     Optional<Hotel> findByHotelNameAndCityName(String hotelName, String cityName);
 
     @Aggregation(pipeline = {
-            "{ $match: { _id: { $in: ?0 } } }",
+            "{ $match: { _id: { $in: ?0 } } }",  // ← stage dedicato
             """
-                    { $project: {
-                        hotel_name: '$HotelName',
-                        sp: { $ifNull: ['$guestStats.seasonality.counts.spring', 0] },
-                        su: { $ifNull: ['$guestStats.seasonality.counts.summer', 0] },
-                        au: { $ifNull: ['$guestStats.seasonality.counts.autumn', 0] },
-                        wi: { $ifNull: ['$guestStats.seasonality.counts.winter', 0] }
-                    }}
-                    """,
+            { $project: {
+                hotelName: '$HotelName',
+                sp: { $ifNull: ['$guestStats.seasonality.counts.spring', 0] },
+                su: { $ifNull: ['$guestStats.seasonality.counts.summer', 0] },
+                au: { $ifNull: ['$guestStats.seasonality.counts.autumn', 0] },
+                wi: { $ifNull: ['$guestStats.seasonality.counts.winter', 0] }
+            }}
+            """,
             """
-                    { $project: {
-                        hotel_name: 1,
-                        spring: '$sp', summer: '$su', autumn: '$au', winter: '$wi',
-                        total: { $add: ['$sp', '$su', '$au', '$wi'] },
-                        peak_visits: { $max: ['$sp', '$su', '$au', '$wi'] }
-                    }}
-                    """,
+            { $addFields: {
+                total: { $add: ['$sp', '$su', '$au', '$wi'] },
+                peak_visits: { $max: ['$sp', '$su', '$au', '$wi'] }
+            }}
+            """,
             """
-                    { $project: {
-                        hotel_name: 1,
-                    
-                        concentration_ratio: { 
-                            $cond: [ { $eq: ['$total', 0] }, 0, { $divide: ['$peak_visits', '$total'] } ] 
-                        },
-                        peak_season: { $switch: { branches: [
-                            { case: { $and: [ { $gt: ['$peak_visits', 0] }, { $eq: ['$peak_visits', '$spring'] } ] }, then: 'spring' },
-                            { case: { $and: [ { $gt: ['$peak_visits', 0] }, { $eq: ['$peak_visits', '$summer'] } ] }, then: 'summer' },
-                            { case: { $and: [ { $gt: ['$peak_visits', 0] }, { $eq: ['$peak_visits', '$autumn'] } ] }, then: 'autumn' },
-                            { case: { $and: [ { $gt: ['$peak_visits', 0] }, { $eq: ['$peak_visits', '$winter'] } ] }, then: 'winter' }
-                        ], default: 'no visits' }}
-                    }}
-                    """,
+            { $addFields: {
+                concentrationRatio: { 
+                    $cond: [ { $eq: ['$total', 0] }, 0, { $divide: ['$peak_visits', '$total'] } ] 
+                },
+                peakSeason: { $switch: { branches: [
+                    { case: { $and: [ { $gt: ['$peak_visits', 0] }, { $eq: ['$peak_visits', '$sp'] } ] }, then: 'spring' },
+                    { case: { $and: [ { $gt: ['$peak_visits', 0] }, { $eq: ['$peak_visits', '$su'] } ] }, then: 'summer' },
+                    { case: { $and: [ { $gt: ['$peak_visits', 0] }, { $eq: ['$peak_visits', '$au'] } ] }, then: 'autumn' },
+                    { case: { $and: [ { $gt: ['$peak_visits', 0] }, { $eq: ['$peak_visits', '$wi'] } ] }, then: 'winter' }
+                ], default: 'no visits' }}
+            }}
+            """,
             """
-                    { $project: {
-                        hotel_name: 1,
-                        peak_season: 1,
-                        concentration_ratio: 1,
-                        risk_label: { $switch: { branches: [
-                            { case: { $eq: ['$peak_season', 'no visits'] }, then: 'no data' },
-                            { case: { $gt: ['$concentration_ratio', 0.65] }, then: 'mono-seasonal risk' },
-                            { case: { $lt: ['$concentration_ratio', 0.30] }, then: 'all-season asset' }
-                        ], default: 'moderate seasonality' }}
-                    }}
-                    """
+            { $project: {
+                hotelName: 1,
+                peakSeason: 1,
+                concentrationRatio: 1,
+                riskLabel: { $switch: { branches: [
+                    { case: { $eq: ['$peakSeason', 'no visits'] }, then: 'no data' },
+                    { case: { $gt: ['$concentrationRatio', 0.65] }, then: 'mono-seasonal risk' },
+                    { case: { $lt: ['$concentrationRatio', 0.30] }, then: 'all-season asset' }
+                ], default: 'moderate seasonality' }}
+            }}
+            """
     })
     List<SeasonalConcentrationDTO> getSeasonalConcentrationByIds(List<ObjectId> hotelIds);
 
