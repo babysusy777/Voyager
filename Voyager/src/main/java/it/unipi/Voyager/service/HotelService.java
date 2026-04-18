@@ -77,27 +77,95 @@ public class HotelService {
         return index;
     }
 
-    public void updateHotelStatsOnNewTrip(String hotelName, String season, String userSegment, String tripBudget) {
+    // Firma aggiornata in HotelService
+    public void updateHotelStatsOnNewTrip(String hotelName, List<String> cities, String season, String userSegment, String tripBudget) {
 
-        // Step 1: incrementa totalVisits e counts stagionali
+        // city nel trip è una List<String>, prendi il primo elemento
+        String cityName = (cities != null && !cities.isEmpty()) ? cities.get(0) : null;
+        if (cityName == null) return;
+
+        // Step 1: incrementa totalVisits e counts stagionali — ora con cityName come secondo filtro
         String seasonField = "guestStats.seasonality.counts." + season;
         mongoTemplate.getCollection("hotels").updateOne(
-                new Document("HotelName", hotelName),
+                new Document("HotelName", hotelName).append("cityName", cityName),
                 new Document("$inc", new Document("guestStats.totalVisits", 1)
                         .append(seasonField, 1))
         );
 
-        // Step 2: recupera city e rating per ricalcolare city_category_avg
+        // Step 2: recupera rating per ricalcolare city_category_avg (cityName già noto)
         Document hotel = mongoTemplate.getCollection("hotels")
-                .find(new Document("HotelName", hotelName))
-                .projection(new Document("cityName", 1).append("HotelRating", 1))
+                .find(new Document("HotelName", hotelName).append("cityName", cityName))
+                .projection(new Document("HotelRating", 1))
                 .first();
 
         if (hotel == null) return;
-        updateCityCategoryAvgVisits(hotel.getString("cityName"), hotel.getString("HotelRating"));
+        updateCityCategoryAvgVisits(cityName, hotel.getString("HotelRating"));
 
         // Step 3: ricalcola segment_distribution e preference_distribution
         updateDistributions(hotelName);
+
+        // Step 4: aggiorna city_index
+        Document cityDoc = mongoTemplate.getCollection("cities")
+                .find(new Document("cityName", cityName))
+                .projection(new Document("city_index", 1))
+                .first();
+
+        if (cityDoc != null) {
+            Document cityIndex = cityDoc.get("city_index", Document.class);
+            int hotelCount = cityIndex != null ? cityIndex.getInteger("hotel_count", 1) : 1;
+            mongoTemplate.getCollection("cities").updateOne(
+                    new Document("cityName", cityName),
+                    Arrays.asList(
+                            new Document("$set", new Document("city_index.total_visits",
+                                    new Document("$add", Arrays.asList("$city_index.total_visits", 1)))),
+                            new Document("$set", new Document("city_index.demand_ratio",
+                                    new Document("$divide", Arrays.asList(
+                                            new Document("$add", Arrays.asList("$city_index.total_visits", 1)),
+                                            hotelCount
+                                    ))))
+                    )
+            );
+        }
+
+        // Step 5: aggiorna seasonality della città
+        String citySeasonField = "seasonality." + season;
+        mongoTemplate.getCollection("cities").updateOne(
+                new Document("cityName", cityName),
+                Arrays.asList(
+                        new Document("$set", new Document(citySeasonField,
+                                new Document("$add", Arrays.asList("$" + citySeasonField, 1)))),
+                        new Document("$set", new Document("seasonality.peak_season",
+                                new Document("$switch", new Document("branches", Arrays.asList(
+                                        new Document("case", new Document("$and", Arrays.asList(
+                                                new Document("$gte", Arrays.asList("$seasonality.spring", "$seasonality.summer")),
+                                                new Document("$gte", Arrays.asList("$seasonality.spring", "$seasonality.autumn")),
+                                                new Document("$gte", Arrays.asList("$seasonality.spring", "$seasonality.winter"))
+                                        ))).append("then", "spring"),
+                                        new Document("case", new Document("$and", Arrays.asList(
+                                                new Document("$gte", Arrays.asList("$seasonality.summer", "$seasonality.spring")),
+                                                new Document("$gte", Arrays.asList("$seasonality.summer", "$seasonality.autumn")),
+                                                new Document("$gte", Arrays.asList("$seasonality.summer", "$seasonality.winter"))
+                                        ))).append("then", "summer"),
+                                        new Document("case", new Document("$and", Arrays.asList(
+                                                new Document("$gte", Arrays.asList("$seasonality.autumn", "$seasonality.spring")),
+                                                new Document("$gte", Arrays.asList("$seasonality.autumn", "$seasonality.summer")),
+                                                new Document("$gte", Arrays.asList("$seasonality.autumn", "$seasonality.winter"))
+                                        ))).append("then", "autumn")
+                                )).append("default", "winter")))),
+                        new Document("$set", new Document("seasonality.concentration_ratio",
+                                new Document("$divide", Arrays.asList(
+                                        new Document("$max", Arrays.asList(
+                                                "$seasonality.spring", "$seasonality.summer",
+                                                "$seasonality.autumn", "$seasonality.winter"
+                                        )),
+                                        new Document("$add", Arrays.asList(
+                                                "$seasonality.spring", "$seasonality.summer",
+                                                "$seasonality.autumn", "$seasonality.winter",
+                                                1
+                                        ))
+                                ))))
+                )
+        );
     }
 
     private void updateDistributions(String hotelName) {

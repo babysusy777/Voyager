@@ -8,6 +8,7 @@ import it.unipi.Voyager.model.Hotel;
 import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.HotelRepository;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
@@ -103,23 +104,23 @@ public class HostService {
 
         return hotelRefs.stream().map(ref -> {
             // Recuperiamo i dati dal riferimento (Partial Embedding)
-            String hName = ref.getString("hotel_name");
-            String hCity = ref.getString("city");
+            String hotelId = ref.getString("hotel_id");
+            if (hotelId == null) return null;
 
             // 3. Query usando Nome e Città invece dell'ID
             Document hotelDoc = mongoTemplate.getCollection("hotels")
-                    .find(new Document("HotelName", hName).append("cityName", hCity))
+                    .find(new Document("_id", new ObjectId(hotelId)))
                     .first();
 
             if (hotelDoc == null) {
-                System.out.println("DEBUG: Hotel not found " + hName + " in " + hCity);
+                System.out.println("DEBUG: Hotel not found for id " + hotelId);
                 return null;
             }
             // 4. Estrazione dati dai documenti annidati
             Document stats = (Document) hotelDoc.get("guestStats");
 
-            String name = hotelDoc.getString("HotelName");
-            String city = hotelDoc.getString("cityName");
+            String hName = hotelDoc.getString("HotelName");
+            String hCity = hotelDoc.getString("cityName");
             String category = hotelDoc.getString("HotelRating");
 
             // Gestione tipi: actualVisits è int nel DTO, cityCategoryAvgVisits è double nel DB
@@ -150,10 +151,14 @@ public class HostService {
         Host host = hostRepository.findByEmail(hostEmail)
                 .orElseThrow(() -> new RuntimeException("Host not found"));
 
-        List<String> hotelIds = host.getHotels().stream()
+        List<ObjectId> hotelObjectIds = host.getHotels().stream()
                 .map(Host.HotelReference::getHotelId)
+                .filter(id -> id != null && !id.isEmpty())
+                .map(ObjectId::new)
                 .toList();
 
-        return hotelRepository.getSeasonalConcentrationByIds(hotelIds);
+        return hotelRepository.getSeasonalConcentrationByIds(hotelObjectIds);
     }
+
+
 }

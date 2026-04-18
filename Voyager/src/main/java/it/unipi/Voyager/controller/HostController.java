@@ -7,7 +7,7 @@ import it.unipi.Voyager.dto.VisibilityGapDTO;
 import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.HotelRepository;
 import it.unipi.Voyager.service.HostService;
-import it.unipi.Voyager.service.graph.CityService;
+import it.unipi.Voyager.service.graph.CityGraphService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +25,7 @@ import java.util.Map;
 public class HostController {
 
     @Autowired
-    private CityService cityService;
+    private CityGraphService cityGraphService;
 
     @Autowired
     private HostRepository hostRepository;
@@ -90,6 +90,23 @@ public class HostController {
             default          -> 0;
         };
     }
+    @PatchMapping("/{email}/hotels/{cityName}/{hotelName}")
+    public ResponseEntity<?> patchHotel(
+            @PathVariable String email,
+            @PathVariable String cityName,
+            @PathVariable String hotelName,
+            @RequestBody Map<String, Object> updates) {
+
+        try {
+            hostService.updateHotelPartial(email, cityName, hotelName, updates);
+            return ResponseEntity.ok("Dati hotel aggiornati con successo.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore interno.");
+        }
+    }
+
 //non riesco a far modificare l'hotel nella città
     @PutMapping("/update-hotel")
     public ResponseEntity<?> updateHotelInformation(@RequestBody HostHotelUpdateRequest request) {
@@ -176,7 +193,7 @@ public class HostController {
 
     @GetMapping("/analysis/similar-cities")
     public ResponseEntity<?> getSimilarCities(@RequestParam String cityName) {
-        List<Map<String, Object>> similarCities = cityService.getSimilarCities(cityName);
+        List<Map<String, Object>> similarCities = cityGraphService.getSimilarCities(cityName);
 
         if (similarCities.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -185,5 +202,49 @@ public class HostController {
 
         return ResponseEntity.ok(similarCities);
     }
+
+   /* @DeleteMapping("/delete-hotel")
+    public ResponseEntity<?> deleteHotel(
+            @RequestParam String email,
+            @RequestParam String hotelName,
+            @RequestParam String cityName) {
+        try {
+            // 1. Trova l'hotel per Nome e Città per ottenere l'ID reale
+            Hotel hotel = hotelRepository.findByHotelNameAndCityName(hotelName, cityName)
+                    .orElseThrow(() -> new RuntimeException("Hotel not found in this city"));
+
+            String hotelId = hotel.getId();
+
+            // 2. Trova l'Host e verifica che possieda questo specifico hotel
+            Host host = hostRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Host not found"));
+
+            boolean owns = host.getHotels() != null && host.getHotels().stream()
+                    .anyMatch(h -> h.getHotelId().equals(hotelId));
+
+            if (!owns) {
+                return ResponseEntity.status(403).body("Host doesn't own this hotel");
+            }
+
+            // 3. RIMOZIONE DA HOST (Partial Embedding)
+            host.getHotels().removeIf(h -> h.getHotelId().equals(hotelId));
+            hostRepository.save(host);
+
+            // 4. AGGIORNAMENTO CITY (Consistenza Strategia Ibrida)
+            // Usiamo i parametri che abbiamo già
+            updateCityAfterDeletion(cityName, hotelId, hotelName);
+
+            // 5. RIMOZIONE DA HOTELS (Collezione principale)
+            hotelRepository.deleteById(hotelId);
+
+            // 6. SYNC NEO4J
+            neo4jSyncService.syncHotelDeletion(hotelName, cityName);
+
+            return ResponseEntity.ok("Hotel '" + hotelName + "' deleted correctly");
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }*/
 
 }

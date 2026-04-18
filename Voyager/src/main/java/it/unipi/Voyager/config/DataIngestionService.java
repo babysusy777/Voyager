@@ -10,11 +10,14 @@ import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @Order(1) // Eseguito prima del DatabaseInitializer
@@ -27,6 +30,7 @@ public class DataIngestionService {
     private DatabaseInitializer databaseInitializer;
 
     private final ObjectMapper mapper = new ObjectMapper();
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @EventListener(ApplicationReadyEvent.class)
     public void ingestAll() {
@@ -51,7 +55,7 @@ public class DataIngestionService {
                     new com.mongodb.client.model.IndexOptions().unique(true)
             );
 
-            InputStream is = new ClassPathResource("hotel_ridotto.json").getInputStream();
+            InputStream is = new ClassPathResource("hotels.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
 
@@ -118,26 +122,44 @@ public class DataIngestionService {
             return;
         }
         try {
-            InputStream is = new ClassPathResource("hosts_ridotto.json").getInputStream();
+            // Costruisce lookup: "HotelName::cityName" -> MongoDB _id (stringa hex)
+            // Usato per linkare gli hotel embedded negli host al documento hotel reale
+            Map<String, String> hotelIdLookup = new HashMap<>();
+            mongoTemplate.getCollection("hotels")
+                    .find()
+                    .forEach(h -> {
+                        String key = h.getString("HotelName") + "::" + h.getString("cityName");
+                        hotelIdLookup.put(key, h.getObjectId("_id").toHexString());
+                    });
+
+            InputStream is = new ClassPathResource("hosts.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
 
             for (JsonNode node : root) {
                 Document doc = new Document();
-                doc.append("username",  node.path("username").asText());
                 doc.append("email",     node.path("email").asText());
-                doc.append("password",  node.path("password").asText());
+                doc.append("password",  passwordEncoder.encode(node.path("password").asText()));
                 doc.append("full_name", node.path("full_name").asText());
                 doc.append("role",      UserRole.HOST.name());
 
                 List<Document> hotels = new ArrayList<>();
                 for (JsonNode h : node.path("hotels")) {
-                    hotels.add(new Document()
-                            .append("hotel_id",   h.path("hotel_id").asText())
-                            .append("hotel_name", h.path("hotel_name").asText())
-                            .append("city",       h.path("city").asText())
-                            .append("stars",      h.path("stars").asInt())
-                    );
+                    String hotelName = h.path("hotel_name").asText();
+                    String city      = h.path("city").asText();
+                    String mongoId   = hotelIdLookup.get(hotelName + "::" + city);
+
+                    Document hotelRef = new Document()
+                            .append("hotel_name", hotelName)
+                            .append("city",       city)
+                            .append("stars",      h.path("stars").asInt());
+
+                    // Collega al documento hotel reale se trovato
+                    if (mongoId != null) {
+                        hotelRef.append("hotel_id", mongoId);
+                    }
+
+                    hotels.add(hotelRef);
                 }
                 doc.append("hotels", hotels);
                 docs.add(doc);
@@ -159,7 +181,7 @@ public class DataIngestionService {
             return;
         }
         try {
-            InputStream is = new ClassPathResource("users_ridotto.json").getInputStream();
+            InputStream is = new ClassPathResource("users.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
 
@@ -169,6 +191,7 @@ public class DataIngestionService {
                 doc.append("name",     node.path("name").asText());
                 doc.append("gender",   node.path("gender").asText());
                 doc.append("email",    node.path("email").asText());
+                doc.append("password", passwordEncoder.encode(node.path("password").asText()));
                 doc.append("age",      node.path("age").asInt());
                 doc.append("country",  node.path("country").asText());
                 doc.append("role",     UserRole.TRAVELLER.name());
@@ -180,35 +203,29 @@ public class DataIngestionService {
                         .append("season",      prefs.path("season").asText())
                 );
 
+                List<Document> trips = new ArrayList<>();
+                for (JsonNode t : node.path("past_trips")) {
+                    List<String> cities = new ArrayList<>();
+                    cities.add(t.path("city").asText());
 
-                // past_trips: hotel_id nel JSON diventa hotel_name embedded
-                    List<Document> trips = new ArrayList<>();
-                    for (JsonNode t : node.path("past_trips")) {
-                        // 1. Gestione City come Lista
-                        List<String> cities = new ArrayList<>();
-                        cities.add(t.path("city").asText());
+                    List<Document> hotelsList = new ArrayList<>();
+                    hotelsList.add(new Document()
+                            .append("hotelName",  t.path("hotel_id").asText())
+                            .append("hotelStars", t.path("hotel_stars").asText())
+                    );
 
-                        // 2. Creazione dell'oggetto embedded 'hotels'
-                        // Creiamo una lista di Document per rispettare la struttura [ { ... } ]
-                        List<Document> hotelsList = new ArrayList<>();
-                        hotelsList.add(new Document()
-                                .append("hotelName",  t.path("hotel_id").asText()) // Mappato su hotelName come richiesto
-                                .append("hotelStars", t.path("hotel_stars").asText()) // Nota: nel tuo esempio è una stringa ('threeStar')
-                        );
-
-                        // 3. Costruzione del documento Trip principale
-                        trips.add(new Document()
-                                .append("trip_name",    t.path("trip_name").asText())
-                                .append("city",         cities) // Ora è una lista
-                                .append("hotels",       hotelsList) // Array di oggetti embedded
-                                .append("season",       t.path("season").asText())
-                                .append("date",         t.path("date").asText())
-                                .append("rating_given", t.path("rating_given").asInt())
-                                .append("budget",       t.path("trip_budget").asText()) // Cambiato 'trip_budget' in 'budget'
-                        );
-                    }
-                    doc.append("past_trips", trips);
-                    docs.add(doc);
+                    trips.add(new Document()
+                            .append("trip_name",    t.path("trip_name").asText())
+                            .append("city",         cities)
+                            .append("hotels",       hotelsList)
+                            .append("season",       t.path("season").asText())
+                            .append("date",         t.path("date").asText())
+                            .append("rating_given", t.path("rating_given").asInt())
+                            .append("budget",       t.path("trip_budget").asText())
+                    );
+                }
+                doc.append("past_trips", trips);
+                docs.add(doc);
             }
 
             mongoTemplate.getCollection("travellers").insertMany(docs);
@@ -235,7 +252,7 @@ public class DataIngestionService {
             );
             System.out.println("[Ingestion] Indice univoco su cityName creato.");
 
-            InputStream is = new ClassPathResource("city_ridotto.json").getInputStream();
+            InputStream is = new ClassPathResource("city.json").getInputStream();
             JsonNode root = mapper.readTree(is);
             List<Document> docs = new ArrayList<>();
 
@@ -284,7 +301,7 @@ public class DataIngestionService {
                     Document h = allHotelsInCity.get(i);
                     topValueHotels.add(new Document()
                             .append("hotel_name", h.getString("HotelName"))
-                            .append("stars",      h.getString("HotelRating")) // Manteniamo stringa come da modello
+                            .append("stars",      h.getString("HotelRating"))
                             .append("avg_price",  h.getDouble("average_price_per_night"))
                     );
                 }
@@ -299,7 +316,6 @@ public class DataIngestionService {
                 doc.append("other_hotel_ids", otherHotelIds);
 
                 // 3. Altri campi
-
                 doc.append("city_index", new Document("total_visits", 0).append("hotel_count", allHotelsInCity.size()));
 
                 docs.add(doc);

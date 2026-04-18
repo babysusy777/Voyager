@@ -147,7 +147,7 @@ public class Neo4jSyncService {
         if (prefs != null) {
             node.setPreferencesBudget(prefs.getString("budget"));
             node.setPreferencesSeason(prefs.getString("season"));
-            node.setTravelType(tDoc.getString("travel_type"));
+            node.setTravelType(prefs.getString("travel_type"));
         }
 
         // MADE_TRIP + STAYED_AT

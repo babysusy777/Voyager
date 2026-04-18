@@ -13,6 +13,7 @@ import it.unipi.Voyager.config.Neo4jSyncService;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -88,6 +89,59 @@ public class TravellerService {
 
     }
 
+    public void updateTripPartial(String email, String tripName, Map<String, Object> updates) {
+        // 1. Costruiamo il filtro per trovare il traveller e lo specifico viaggio nell'array
+        Document query = new Document("email", email)
+                .append("past_trips.trip_name", tripName);
+
+        // 2. Prepariamo i campi di update
+        Document setFields = new Document();
+
+        updates.forEach((key, value) -> {
+            // Mappiamo i campi del DTO/Mappa ai nomi reali sul DB (es: budget, rating_given)
+            // Usiamo la sintassi past_trips.$.nomeCampo
+            String mongoKey = "past_trips.$." + convertToDbFieldName(key);
+
+            // Gestione speciale per la lista di hotel se viene passata come lista di mappe
+            if (key.equals("hotels") && value instanceof List) {
+                setFields.append(mongoKey, value);
+            } else {
+                setFields.append(mongoKey, value);
+            }
+        });
+
+        if (setFields.isEmpty()) return;
+
+        // 3. Eseguiamo l'update
+        UpdateResult result = mongoTemplate.getCollection("travellers")
+                .updateOne(query, new Document("$set", setFields));
+
+        if (result.getMatchedCount() > 0) {
+            // 4. Se l'update ha toccato campi sensibili, ricalcoliamo segmenti e sync
+            // Nota: Qui potresti voler aggiungere un controllo se 'updates' contiene budget o rating
+            TravellerSegmentDTO newSegment = travellerRepository.computeSegment(email);
+            if (newSegment != null) {
+                mongoTemplate.getCollection("travellers").updateOne(
+                        new Document("email", email),
+                        new Document("$set", new Document("user_segment", newSegment.getSegment()))
+                );
+            }
+            travellerNodeRepository.computeAndStoreTravelType(email);
+            neo4jSyncService.syncTravellerByEmail(email);
+        } else {
+            throw new RuntimeException("Viaggio o Traveller non trovato.");
+        }
+    }
+
+    // Metodo helper per mappare i nomi dei campi Java/JSON a quelli definiti con @Field in MongoDB
+    private String convertToDbFieldName(String jsonKey) {
+        switch (jsonKey) {
+            case "tripName": return "trip_name";
+            case "ratingGiven": return "rating_given";
+            default: return jsonKey; // city, budget, season, date, hotels coincidono
+        }
+    }
+
     public void upsertTrip(String email, TripDTO tripDto) {
         //Document tripDoc = new Document();
         //mongoTemplate.getConverter().write(tripDto, tripDoc);
@@ -139,9 +193,10 @@ public class TravellerService {
             for (Traveller.Trip.HotelSummary hotel : tripDto.getHotels()) {
                 hotelService.updateHotelStatsOnNewTrip(
                         hotel.getHotelName(),
+                        tripDto.getCity(),            // ← aggiunto
                         tripDto.getSeason(),
-                        traveller.getUserSegment(),  // recuperato prima con findByEmail
-                        tripDto.getBudget()      // se presente nel DTO
+                        traveller.getUserSegment(),
+                        tripDto.getBudget()
                 );
             }
         }
@@ -154,11 +209,11 @@ public class TravellerService {
                     new Document("$set", new Document("user_segment", newSegment.getSegment()))
             );
         }
-        // Ricalcola travelType sul nodo Neo4j dopo un nuovo trip
-        travellerNodeRepository.computeAndStoreTravelType(email);
 
         // Sync Neo4j dopo update
+        // Ricalcola travelType sul nodo Neo4j dopo un nuovo trip
         neo4jSyncService.syncTravellerByEmail(email);
+        travellerNodeRepository.computeAndStoreTravelType(email);
     }
 
     public List<Traveller.Trip> getTripsSortedByDate(String email) {
@@ -214,14 +269,12 @@ public class TravellerService {
 
     private String analyzeTrend(List<Integer> stars) {
 
-
         if (stars == null || stars.isEmpty()) {
             return "DATI INSUFFICIENTI";
         }
         if (stars.size() < 2) {
             return "STABILE (Dato singolo)";
         }
-
 
         int mid = stars.size() / 2;
 
@@ -234,7 +287,6 @@ public class TravellerService {
                 .mapToInt(Integer::intValue)
                 .average()
                 .orElse(0.0);
-
 
         double diff = secondHalfAvg - firstHalfAvg;
         double threshold = 0.2;

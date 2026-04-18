@@ -4,6 +4,7 @@ import it.unipi.Voyager.dto.CityIndexDTO;
 import it.unipi.Voyager.dto.FacilitiesGapDTO;
 import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
 import it.unipi.Voyager.model.Hotel;
+import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
@@ -63,7 +64,7 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
                     }}
                     """
     })
-    List<SeasonalConcentrationDTO> getSeasonalConcentrationByIds(List<String> hotelIds);
+    List<SeasonalConcentrationDTO> getSeasonalConcentrationByIds(List<ObjectId> hotelIds);
 
     @Aggregation(pipeline = {
             "{ $match: { cityName: ?0, HotelRating: ?1, 'guestStats.avgRatingGiven': { $gte: ?2 } } }",
