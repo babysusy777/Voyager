@@ -2,6 +2,7 @@ package it.unipi.Voyager.controller;
 
 import it.unipi.Voyager.dto.AttractionDiscoveryDTO;
 import it.unipi.Voyager.dto.AttractionCentralityDTO;
+import it.unipi.Voyager.dto.CityDTO;
 import it.unipi.Voyager.dto.CityIndexDTO;
 import it.unipi.Voyager.model.City;
 import it.unipi.Voyager.repository.CityRepository;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/cities")
@@ -32,12 +34,31 @@ public class CityController {
     private AttractionService attractionService;
 
     @GetMapping("/traveller/search")
-    public ResponseEntity<City> getCityByName(@RequestParam String name) {
+    public ResponseEntity<CityDTO> getCityByName(@RequestParam String name) {
         return cityRepository.findByName(name)
-                .map(ResponseEntity::ok) // 200 OK
-                .orElse(ResponseEntity.notFound().build()); //  404 Not Found se non esiste
+                .map(this::convertToDTO) // Mappatura da City a CityDTO
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
+    // Metodo di supporto per la conversione
+    private CityDTO convertToDTO(City city) {
+        List<CityDTO.HotelSummaryDTO> hotelDTOs = city.getTopValueHotels().stream()
+                .map(h -> new CityDTO.HotelSummaryDTO(
+                        h.getHotelName(),
+                        h.getHotelStars(),
+                        h.getAvgPrice()
+                ))
+                .collect(Collectors.toList());
+
+        return new CityDTO(
+                city.getName(),
+                city.getCostOfLiving(),
+                city.getSafety(),
+                city.getBestTimeToVisit(),
+                hotelDTOs
+        );
+    }
     @GetMapping("/host/city-index")
     public ResponseEntity<?> getCityIndex(@RequestParam String cityName) {
         try {
