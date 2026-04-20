@@ -62,8 +62,8 @@ public class TripController {
         try {
             travellerService.upsertTrip(email, tripDto);
 
-            return ResponseEntity.ok("Operazione completata: il viaggio '" +
-                    tripDto.getTripName() + "' è stato sincronizzato correttamente.");
+            return ResponseEntity.ok("Operation completed: the trip '" +
+                    tripDto.getTripName() + "' has been synchronized successfully.");
 
         } catch (IllegalArgumentException e) {
             // Gestione caso utente non trovato o dati non validi

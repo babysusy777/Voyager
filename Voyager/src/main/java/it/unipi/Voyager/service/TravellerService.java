@@ -261,7 +261,7 @@ public class TravellerService {
         Document res = mongoTemplate.getCollection("travellers").aggregate(pipeline).first();
 
         if (res == null || res.getList("starHistory", Integer.class) == null) {
-            return "DATI INSUFFICIENTI";
+            return "INSUFFICIENT DATA";
         }
 
         return analyzeTrend(res.getList("starHistory", Integer.class));
@@ -270,10 +270,10 @@ public class TravellerService {
     private String analyzeTrend(List<Integer> stars) {
 
         if (stars == null || stars.isEmpty()) {
-            return "DATI INSUFFICIENTI";
+            return "INSUFFICIENT DATA";
         }
         if (stars.size() < 2) {
-            return "STABILE (Dato singolo)";
+            return "STABLE (Single data point)";
         }
 
         int mid = stars.size() / 2;
@@ -292,17 +292,17 @@ public class TravellerService {
         double threshold = 0.2;
 
         if (diff > threshold) {
-            return "CRESCENTE (L'utente sta scegliendo hotel di qualità sempre maggiore)";
+            return "INCREASING (The user is choosing hotels of progressively higher quality)";
         } else if (diff < -threshold) {
-            return "DECRESCENTE (L'utente sta riducendo lo standard degli hotel)";
+            return "DECREASING (The user is reducing their hotel quality standards)";
         } else {
-            return "STABILE (Le preferenze di qualità rimangono costanti nel tempo)";
+            return "STABLE (Quality preferences remain constant over time)";
         }
     }
 
     public TravellerSegmentDTO getTravellerSegment(String email) {
         Traveller traveller = travellerRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Traveller non trovato"));
+                .orElseThrow(() -> new RuntimeException("Traveller not found"));
 
         TravellerSegmentDTO dto = new TravellerSegmentDTO();
         dto.setSegment(traveller.getUserSegment());

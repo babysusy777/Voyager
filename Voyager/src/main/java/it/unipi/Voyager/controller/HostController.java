@@ -200,7 +200,7 @@ public class HostController {
         try {
             // 1. Recupero l'hotel per trovare l'ID reale (fondamentale per pulire Host e City)
             Hotel hotel = hotelRepository.findByHotelNameAndCityName(hotelName, cityName)
-                    .orElseThrow(() -> new RuntimeException("Hotel non trovato in questa città"));
+                    .orElseThrow(() -> new RuntimeException("Hotel not found in this city"));
 
             String hotelId = hotel.getId();
 
@@ -213,12 +213,12 @@ public class HostController {
             // 4. Elimino l'Hotel fisicamente dalla collezione principale
             hotelRepository.deleteById(hotelId);
 
-            return ResponseEntity.ok("Hotel '" + hotelName + "' rimosso correttamente da tutti i sistemi.");
+            return ResponseEntity.ok("Hotel '" + hotelName + "' removed correctly.");
 
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore imprevisto.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error.");
         }
     }
 
