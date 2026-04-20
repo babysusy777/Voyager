@@ -64,7 +64,11 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
     List<SeasonalConcentrationDTO> getSeasonalConcentrationByIds(List<ObjectId> hotelIds);
 
     @Aggregation(pipeline = {
-            "{ $match: { cityName: ?0, HotelRating: ?1, HotelName: { $ne: ?2 } } }",
+            "{ $match: { " +
+                    "cityName: { $regex: ?0, $options: 'i' }, " +
+                    "HotelRating: { $regex: ?1, $options: 'i' }, " +
+                    "HotelName: { $ne: ?2 } " +
+                    "} }",
             "{ $unwind: '$HotelFacilities' }",
             "{ $group: { _id: null, peerFacilities: { $addToSet: '$HotelFacilities' } } }",
             "{ $project: { _id: 0, missing: { $setDifference: ['$peerFacilities', ?3] } } }"

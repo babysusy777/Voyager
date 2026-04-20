@@ -95,23 +95,6 @@ public class HostController {
         };
     }
 
-    /*
-    @PatchMapping("/{email}/hotels/{cityName}/{hotelName}")
-    public ResponseEntity<?> patchHotel(
-            @PathVariable String email,
-            @PathVariable String cityName,
-            @PathVariable String hotelName,
-            @RequestBody Map<String, Object> updates) {
-
-        try {
-            hostService.updateHotelPartial(email, cityName, hotelName, updates);
-            return ResponseEntity.ok("Dati hotel aggiornati con successo.");
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Errore interno.");
-        }
-    }*/
 
 //non riesco a far modificare l'hotel nella città
     @PutMapping("/update-hotel")
