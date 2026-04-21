@@ -1,5 +1,6 @@
 package it.unipi.Voyager.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import it.unipi.Voyager.dto.FacilitiesGapDTO;
 import it.unipi.Voyager.dto.HotelSearchDTO;
 import it.unipi.Voyager.model.Hotel;
@@ -37,6 +38,8 @@ public class HotelController {
 //        }
 //    }
 
+    @Operation(summary = "Search hotel by name and city",
+            description = "Returns full hotel details.")
     @GetMapping("/search")
     public ResponseEntity<HotelSearchDTO> getHotelByNameAndCityName(@RequestParam String hotelName, @RequestParam String cityName) {
         return hotelRepository.findByHotelNameAndCityName(hotelName, cityName)
@@ -54,6 +57,8 @@ public class HotelController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Operation(summary = "Facilities gap analysis for the host's hotel",
+            description = "Returns the list of facilities offered by competitor hotels in the same city and category that are missing from the host's hotel.")
     @GetMapping("/host/facilities-gap")
     public ResponseEntity<FacilitiesGapDTO> getFacilitiesGap(@RequestParam String hotelName, @RequestParam String cityName) {
         FacilitiesGapDTO result = hotelService.getFacilitiesGap(hotelName, cityName);

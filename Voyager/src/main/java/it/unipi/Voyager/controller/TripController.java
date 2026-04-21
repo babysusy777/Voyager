@@ -1,5 +1,6 @@
 package it.unipi.Voyager.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import it.unipi.Voyager.dto.TrendResponseDTO;
 import it.unipi.Voyager.dto.TripDTO;
 import it.unipi.Voyager.model.Traveller;
@@ -23,9 +24,8 @@ public class TripController {
     @Autowired
     private TravellerRepository travellerRepository;
 
-     // Endpoint per aggiungere un nuovo viaggio o aggiornarne uno esistente
-     // per un determinato utente.
-
+    @Operation(summary = "Partially update a trip",
+            description = "Allows partial update of a trip's fields via PATCH. Only the fields included in the request body will be updated.")
     @PatchMapping("/{email}/trips/{tripName}")
     public ResponseEntity<String> updateTripFields(
             @PathVariable String email,
@@ -41,6 +41,8 @@ public class TripController {
         }
     }
 
+    @Operation(summary = "Get a single trip by name",
+            description = "Returns the details of a specific trip for the given traveller, identified by trip name.")
     @GetMapping("/{email}/trips/{tripName}")
     public ResponseEntity<?> getSingleTrip(@PathVariable String email, @PathVariable String tripName) {
         // Utilizziamo un'aggregazione o una query mirata per restituire solo il viaggio interessato
@@ -54,6 +56,8 @@ public class TripController {
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
+    @Operation(summary = "Create or update a trip",
+            description = "Inserts a new trip for the given traveller.")
     @PostMapping("/{email}/upsert")
     public ResponseEntity<String> upsertTrip(
             @PathVariable String email,
@@ -90,8 +94,8 @@ public class TripController {
 //        }
 //    }
 
-    // Recupera tutti i viaggi di un utente ordinati per data.
-
+    @Operation(summary = "Get all trips of a traveller",
+            description = "Returns the list of past trips for the given user, ordered by date.")
     @GetMapping("/{email}/trip")
     public ResponseEntity<List<Traveller.Trip>> getPastTrips(@PathVariable String email) {
         List<Traveller.Trip> trips = travellerService.getTripsSortedByDate(email);
@@ -103,6 +107,8 @@ public class TripController {
         return ResponseEntity.ok(trips);
     }
 
+    @Operation(summary = "Hotel quality trend analysis",
+            description = "Analyzes the progression of hotel star ratings across the user's trips over time. Returns INCREASING, DECREASING, or STABLE trend.")
     @GetMapping("/{email}/trend")
     public ResponseEntity<TrendResponseDTO> getTravelerTrend(@PathVariable String email) {
         try {

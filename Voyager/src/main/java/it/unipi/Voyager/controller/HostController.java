@@ -1,5 +1,6 @@
 package it.unipi.Voyager.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import it.unipi.Voyager.config.Neo4jSyncService;
 import it.unipi.Voyager.dto.HostHotelUpdateRequest;
 import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
@@ -43,6 +44,8 @@ public class HostController {
     @Autowired
     private CityService cityService;
 
+    @Operation(summary = "Add a new hotel",
+            description = "Creates a new hotel associated with the authenticated host.")
     @PostMapping("/add-hotel")
     public ResponseEntity<?> addHotel(@RequestBody HostHotelRequest request) {
         try {
@@ -162,6 +165,8 @@ public class HostController {
     } */
 
     // VERSIONE CON CAMPO PRECALCOLATO
+    @Operation(summary = "Visibility gap analysis",
+            description = "Compares the host's hotel total visits against the average visits of hotels in the same city and category. Returns the gap value: negative means below average, positive means above average.")
     @GetMapping("/{email}/gap-simple")
     public ResponseEntity<List<VisibilityGapDTO>> getGapSimple(@PathVariable String email) {
         List<VisibilityGapDTO> report = hostService.getGapSimple(email);
@@ -173,6 +178,8 @@ public class HostController {
         return ResponseEntity.ok(report);
     }
 
+    @Operation(summary = "Seasonal concentration analysis",
+            description = "Returns the distribution of guest arrivals across seasons for the host's hotel.")
     @GetMapping("/seasonal-concentration")
     public ResponseEntity<List<SeasonalConcentrationDTO>> getSeasonalConcentration(@RequestParam String email) {
         List<SeasonalConcentrationDTO> result = hostService.getSeasonalConcentration(email);
@@ -180,6 +187,8 @@ public class HostController {
         return ResponseEntity.ok(result);
     }
 
+    @Operation(summary = "Find similar cities",
+            description = "Returns a list of cities similar to the given one, based on shared attraction categories.")
     @GetMapping("/analysis/similar-cities")
     public ResponseEntity<?> getSimilarCities(@RequestParam String cityName) {
         List<Map<String, Object>> similarCities = cityGraphService.getSimilarCities(cityName);

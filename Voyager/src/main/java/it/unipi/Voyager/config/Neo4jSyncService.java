@@ -1,14 +1,18 @@
 package it.unipi.Voyager.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unipi.Voyager.model.graph.*;
 import it.unipi.Voyager.repository.graph.*;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class Neo4jSyncService {
@@ -30,36 +34,44 @@ public class Neo4jSyncService {
     // Step A: City + Attraction + IN_CITY
     private void syncCitiesAndAttractions() {
         System.out.println("[Neo4j] Sync City + Attraction...");
-        List<Document> cities = new ArrayList<>();
-        mongoTemplate.getCollection("cities").find().into(cities);
 
-        for (Document cityDoc : cities) {
-            String cityName = cityDoc.getString("cityName");
-            if (cityName == null) continue;
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            InputStream is = new ClassPathResource("city.json").getInputStream();
+            List<Map<String, Object>> cities = mapper.readValue(is, List.class);
 
-            CityNode cityNode = cityGraphRepository.findById(cityName)
-                    .orElse(new CityNode());
-            cityNode.setCityName(cityName);
-            cityGraphRepository.save(cityNode);
+            for (Map<String, Object> cityDoc : cities) {
+                String cityName = (String) cityDoc.get("cityName");
+                if (cityName == null) continue;
 
-            List<Document> attractions = cityDoc.getList("attractions", Document.class);
-            if (attractions == null) continue;
+                CityNode cityNode = cityGraphRepository.findById(cityName)
+                        .orElse(new CityNode());
+                cityNode.setCityName(cityName);
+                cityGraphRepository.save(cityNode);
 
-            for (Document attrDoc : attractions) {
-                String name = attrDoc.getString("name");
-                if (name == null) continue;
+                List<Map<String, Object>> attractions = (List<Map<String, Object>>) cityDoc.get("attractions");
+                if (attractions == null) continue;
 
-                List<String> types = attrDoc.getList("type", String.class);
-                String category = (types != null && !types.isEmpty()) ? types.get(0) : "unknown";
+                for (Map<String, Object> attrDoc : attractions) {
+                    String name = (String) attrDoc.get("name");
+                    if (name == null) continue;
 
-                AttractionNode attrNode = attractionGraphRepository.findById(name)
-                        .orElse(new AttractionNode());
-                attrNode.setName(name);
-                attrNode.setCategory(category);
-                attrNode.setCity(cityNode);
-                attractionGraphRepository.save(attrNode);
+                    List<String> types = (List<String>) attrDoc.get("type");
+                    String category = (types != null && !types.isEmpty()) ? types.get(0) : "unknown";
+
+                    AttractionNode attrNode = attractionGraphRepository.findById(name)
+                            .orElse(new AttractionNode());
+                    attrNode.setName(name);
+                    attrNode.setCategory(category);
+                    attrNode.setCity(cityNode);
+                    attractionGraphRepository.save(attrNode);
+                }
             }
+        } catch (Exception e) {
+            System.err.println("[Neo4j] Errore lettura city.json: " + e.getMessage());
+            e.printStackTrace();
         }
+
         System.out.println("[Neo4j] City + Attraction completato.");
     }
 

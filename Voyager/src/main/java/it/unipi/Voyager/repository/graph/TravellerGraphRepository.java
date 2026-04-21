@@ -17,24 +17,24 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
     //and that visited the same cities (medium weight), or same hotels (heavy weight)
 
     @Query("""
-    MATCH (t1:Traveller {email: $email}), (t2:Traveller)
-    WHERE t1 <> t2
-    WITH t1, t2,
-        (CASE WHEN t1.preferencesSeason = t2.preferencesSeason THEN 1 ELSE 0 END +
-         CASE WHEN t1.preferencesBudget = t2.preferencesBudget THEN 1 ELSE 0 END +
-         CASE WHEN t1.travelType = t2.travelType AND t1.travelType IS NOT NULL THEN 1 ELSE 0 END +
-         // Calcolo differenza età: se <= 5 aggiunge 0.5
-         CASE WHEN abs(t1.age - t2.age) <= 5 THEN 0.5 ELSE 0 END) AS profileScore
-    
-    OPTIONAL MATCH (t1)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(h:Hotel)<-[:STAYED_AT]-(:Trip)<-[:MADE_TRIP]-(t2)
-    
-    WITH t1, t2, profileScore, count(DISTINCT h) AS hotelScore
-    WITH t1, t2, (profileScore * 1 + hotelScore * 4) AS finalScore
-    WHERE finalScore > 2
-    
-    MERGE (t1)-[s:SIMILAR_TO]->(t2)
-    SET s.score = finalScore
-""")
+        MATCH (t1:Traveller {email: $email}), (t2:Traveller)
+        WHERE t1 <> t2
+        WITH t1, t2,
+            (CASE WHEN t1.preferencesSeason = t2.preferencesSeason THEN 1 ELSE 0 END +
+             CASE WHEN t1.preferencesBudget = t2.preferencesBudget THEN 1 ELSE 0 END +
+             CASE WHEN t1.travelType = t2.travelType AND t1.travelType IS NOT NULL THEN 1 ELSE 0 END +
+             // Calcolo differenza età: se <= 5 aggiunge 0.5
+             CASE WHEN abs(t1.age - t2.age) <= 5 THEN 0.5 ELSE 0 END) AS profileScore
+        
+        OPTIONAL MATCH (t1)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(h:Hotel)<-[:STAYED_AT]-(:Trip)<-[:MADE_TRIP]-(t2)
+        
+        WITH t1, t2, profileScore, count(DISTINCT h) AS hotelScore
+        WITH t1, t2, (profileScore * 1 + hotelScore * 4) AS finalScore
+        WHERE finalScore > 2
+        
+        MERGE (t1)-[s:SIMILAR_TO]->(t2)
+        SET s.score = finalScore
+    """)
     void computeAndSaveSimilarity(String email);
 
     // Query per ottenere i primi 10 simili
@@ -71,38 +71,38 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
 
     // Recommendations
     @Query("""
-        MATCH (me:Traveller {email: $email})-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:NEAR_TO]->(a:Attraction)
-        WITH me, collect(DISTINCT a.category) AS myPreferredCategories
-    
-        MATCH (me)-[sim:SIMILAR_TO]->(other:Traveller)
-        WHERE sim.score > 2.0
-    
-        OPTIONAL MATCH (me)-[:MADE_TRIP]->(:Trip)-[:IN_CITY]->(visitedCity:City)
-        WITH me, other, sim.score AS similarityScore, myPreferredCategories, collect(DISTINCT visitedCity) AS myCities
-    
-        MATCH (other)-[:MADE_TRIP]->(t:Trip)-[:STAYED_AT]->(h:Hotel)-[:LOCATED_IN]->(newCity:City)
-        WHERE NOT newCity IN myCities
-    
-        OPTIONAL MATCH (newCity)<-[:IN_CITY]-(cityAttr:Attraction)
-        WHERE cityAttr.category IN myPreferredCategories
-        WITH me, h, newCity, similarityScore, myPreferredCategories, count(DISTINCT cityAttr) AS cityMatchCount
-    
-        OPTIONAL MATCH (h)-[:NEAR_TO]->(hotelAttr:Attraction)
-        WHERE hotelAttr.category IN myPreferredCategories
-        WITH newCity, h, similarityScore, cityMatchCount, count(DISTINCT hotelAttr) AS hotelMatchCount
-    
-        WITH newCity, h,
-             (similarityScore * 2) + (cityMatchCount * 1) + (hotelMatchCount * 2) AS finalScore
-        RETURN newCity.cityName AS cityName, h.hotelName AS hotelName, toFloat(finalScore) AS finalScore
-        ORDER BY finalScore DESC
-        LIMIT 10
-    """)
+                MATCH (me:Traveller {email: $email})-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:NEAR_TO]->(a:Attraction)
+                WITH me, collect(DISTINCT a.category) AS myPreferredCategories
+            
+                MATCH (me)-[sim:SIMILAR_TO]->(other:Traveller)
+                WHERE sim.score > 2.0
+            
+                OPTIONAL MATCH (me)-[:MADE_TRIP]->(:Trip)-[:IN_CITY]->(visitedCity:City)
+                WITH me, other, sim.score AS similarityScore, myPreferredCategories, collect(DISTINCT visitedCity) AS myCities
+            
+                MATCH (other)-[:MADE_TRIP]->(t:Trip)-[:STAYED_AT]->(h:Hotel)-[:LOCATED_IN]->(newCity:City)
+                WHERE NOT newCity IN myCities
+            
+                OPTIONAL MATCH (newCity)<-[:IN_CITY]-(cityAttr:Attraction)
+                WHERE cityAttr.category IN myPreferredCategories
+                WITH me, h, newCity, similarityScore, myPreferredCategories, count(DISTINCT cityAttr) AS cityMatchCount
+            
+                OPTIONAL MATCH (h)-[:NEAR_TO]->(hotelAttr:Attraction)
+                WHERE hotelAttr.category IN myPreferredCategories
+                WITH newCity, h, similarityScore, cityMatchCount, count(DISTINCT hotelAttr) AS hotelMatchCount
+            
+                WITH newCity, h,
+                     (similarityScore * 2) + (cityMatchCount * 1) + (hotelMatchCount * 2) AS finalScore
+                RETURN newCity.cityName AS cityName, h.hotelName AS hotelName, toFloat(finalScore) AS finalScore
+                ORDER BY finalScore DESC
+                LIMIT 10
+            """)
     List<RecommendationDTO> getPersonalizedRecommendations(String email);
 
     // Bulk — inizializzazione
     @Query("""
-        MATCH (t:Traveller)
-        OPTIONAL MATCH (t)-[:MADE_TRIP]->()-[:STAYED_AT]->(h:Hotel)-[:NEAR_TO]->(a:Attraction)
+                MATCH (t:Traveller)
+                OPTIONAL MATCH (t)-[:MADE_TRIP]->()-[:STAYED_AT]->(h:Hotel)-[:NEAR_TO]->(a:Attraction)
         WITH t, a.category AS category, COUNT(a) AS categoryCount
         ORDER BY categoryCount DESC
         WITH t, CASE

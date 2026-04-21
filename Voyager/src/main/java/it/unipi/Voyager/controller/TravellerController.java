@@ -48,6 +48,8 @@ public class TravellerController {
         }
     }
 
+    @Operation(summary = "View behavioral segment of the user",
+            description = "budget-hunter, comfort-seeker, explorer, upgrader (referring to the hotel stars)")
     @GetMapping("/segment")
     public ResponseEntity<TravellerSegmentDTO> getSegment(@RequestParam String email) {
         TravellerSegmentDTO result = travellerService.getTravellerSegment(email);
@@ -55,6 +57,8 @@ public class TravellerController {
         return ResponseEntity.ok(result);
     }
 
+    @Operation(summary = "View travel habits of the user",
+            description = "Returns aggregated travel stats: most frequent season, total trips, average rating given, and number of distinct cities visited.")
     @GetMapping("/habits")
     public ResponseEntity<TravelHabitDTO> getTravelHabits(@RequestParam String email) {
         try {
@@ -66,6 +70,8 @@ public class TravellerController {
         }
     }
 
+    @Operation(summary = "Trip frequency and churn analysis",
+            description = "Returns avg gap between trips (days), days since last trip, churn score (0-1, probability of user abandonment based on inactivity relative to personal travel frequency), and relative status (active/at-risk/churned).")
     @GetMapping("/frequency-analysis")
     public ResponseEntity<?> getChurnAnalysis(@RequestParam String email) {
         try {
@@ -79,9 +85,8 @@ public class TravellerController {
         }
     }
 
-    /**
-     * Restituisce la lista dei viaggiatori più simili all'utente loggato.
-     */
+    @Operation(summary = "Find similar travellers",
+            description = "Returns a list of travellers most similar to the given user, based on travel type, preferences and behavioral segment (computed via Neo4j SIMILAR_TO relationships).")
     @GetMapping("/similar-friends")
     public ResponseEntity<List<TravellerNode>> getSimilarTravellers(@RequestParam String email) {
         List<TravellerNode> similarOnes = recommendationService.getSuggestions(email);
@@ -92,9 +97,8 @@ public class TravellerController {
         return ResponseEntity.ok(similarOnes);
     }
 
-    /**
-     * Recommendation
-     */
+    @Operation(summary = "City and Hotel recommendations for the traveller",
+            description = "Returns a ranked list of hotels based on compatibility with the user's preferences, behavioral segment, and travel history. Final score combines multiple factors (season, budget, category match).")
     @GetMapping("/recommendations")
     public ResponseEntity<List<RecommendationDTO>> getRecommendations(@RequestParam String email) {
         travellerGraphRepository.computeAndSaveSimilarity(email);
