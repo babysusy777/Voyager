@@ -1,12 +1,8 @@
 package it.unipi.Voyager.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import it.unipi.Voyager.dto.TravelHabitDTO;
-import it.unipi.Voyager.dto.TravellerConfigRequest;
-import it.unipi.Voyager.dto.TripFrequencyDTO;
-import it.unipi.Voyager.dto.RecommendationDTO;
+import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.Traveller;
-import it.unipi.Voyager.dto.TravellerSegmentDTO;
 import it.unipi.Voyager.model.graph.TravellerNode;
 import it.unipi.Voyager.repository.TravellerRepository;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
@@ -86,19 +82,19 @@ public class TravellerController {
     }
 
     @Operation(summary = "Find similar travellers",
-            description = "Returns a list of travellers most similar to the given user, based on travel type, preferences and behavioral segment (computed via Neo4j SIMILAR_TO relationships).")
+            description = "Returns a list of travellers most similar to the given user, based on travel type, preferences and behavioral segment.")
     @GetMapping("/similar-friends")
-    public ResponseEntity<List<TravellerNode>> getSimilarTravellers(@RequestParam String email) {
-        List<TravellerNode> similarOnes = recommendationService.getSuggestions(email);
-
-        if (similarOnes.isEmpty()) {
+    public ResponseEntity<List<TravellerSimilarityDTO>> getSimilarTravellers(@RequestParam String email) {
+        List<TravellerSimilarityDTO> result = recommendationService.getSuggestions(email);
+        if (result.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(similarOnes);
+        return ResponseEntity.ok(result);
     }
 
     @Operation(summary = "City and Hotel recommendations for the traveller",
             description = "Returns a ranked list of hotels based on travel history.")
+    @GetMapping("/recommendation")
     public ResponseEntity<List<RecommendationDTO>> getRecommendations(@RequestParam String email) {
         travellerGraphRepository.computeAndSaveSimilarity(email);
         List<RecommendationDTO> recommendations = travellerGraphRepository.getPersonalizedRecommendations(email);

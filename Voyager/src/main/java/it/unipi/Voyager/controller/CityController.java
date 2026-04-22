@@ -1,14 +1,13 @@
 package it.unipi.Voyager.controller;
 
-import it.unipi.Voyager.dto.AttractionDiscoveryDTO;
-import it.unipi.Voyager.dto.AttractionCentralityDTO;
-import it.unipi.Voyager.dto.CityDTO;
-import it.unipi.Voyager.dto.CityIndexDTO;
+import io.swagger.v3.oas.annotations.Operation;
+import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.City;
 import it.unipi.Voyager.repository.CityRepository;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import it.unipi.Voyager.service.AttractionService;
 import it.unipi.Voyager.service.HotelService;
+import it.unipi.Voyager.service.graph.CityGraphService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +24,9 @@ public class CityController {
     private CityRepository cityRepository;
 
     @Autowired
+    private CityGraphService cityGraphService;
+
+    @Autowired
     private HotelService hotelService;
 
     @Autowired
@@ -33,7 +35,9 @@ public class CityController {
     @Autowired
     private AttractionService attractionService;
 
-    @GetMapping("/traveller/search")
+    @Operation(summary = "Search city by name",
+            description = "Returns general information about a city given its exact name, including cost of living, safety notes, best time to visit, and the top value hotels ranked by average price. Returns 404 if the city is not found.")
+    @GetMapping("/search")
     public ResponseEntity<CityDTO> getCityByName(@RequestParam String name) {
         return cityRepository.findByName(name)
                 .map(this::convertToDTO) // Mappatura da City a CityDTO
@@ -59,6 +63,9 @@ public class CityController {
                 hotelDTOs
         );
     }
+
+    @Operation(summary = "City supply-demand index",
+            description = "Returns a supply-demand analysis for a given city, computed as the ratio of total guest visits to number of hotels (demandRatio). Cities are classified as UNDERSUPPLIED (demandRatio > 5, high demand relative to supply), OVERSUPPLIED (demandRatio < 0.5, too many hotels for actual demand), or BALANCED otherwise. Useful for hosts evaluating market saturation before opening a new property.")
     @GetMapping("/host/city-index")
     public ResponseEntity<?> getCityIndex(@RequestParam String cityName) {
         try {
@@ -73,6 +80,8 @@ public class CityController {
         }
     }
 
+    @Operation(summary = "Discovery tips for returning travellers",
+            description = "For a traveller who has already visited some cities, returns attractions classified as CENTRAL_NEW (top 25% by centrality, with no past hotel stay nearby) or HIDDEN_GEM (bottom 75% by centrality, regardless of proximity to past stays).")
     @GetMapping("/traveller/discovery-tips")
     public ResponseEntity<List<AttractionDiscoveryDTO>> getDiscoveryTips(@RequestParam String email) {
         try {
@@ -89,11 +98,27 @@ public class CityController {
         }
     }
 
+    @Operation(summary = "Top attractions by city",
+            description = "Returns the most central attractions in a given city, ranked by a centrality score computed as the product of hotel sharing (how many hotels are near the attraction) and co-attraction count (how many other attractions share the same nearby hotels). Higher scores indicate attractions that are well-connected within the city's hospitality network.")
     @GetMapping("/top-attractions")
     public ResponseEntity<List<AttractionCentralityDTO>> getTopAttractions(
             @RequestParam String cityName) {
         List<AttractionCentralityDTO> result = attractionService.getTopAttractions(cityName);
         if (result == null || result.isEmpty()) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(result);
+    }
+
+    @Operation(summary = "Find similar cities",
+            description = "Returns a list of cities similar to the given one, based on shared attraction categories.")
+    @GetMapping("/similar-cities")
+    public ResponseEntity<?> getSimilarCities(@RequestParam String cityName) {
+        List<CitySimilarityDTO> similarCities = cityGraphService.getSimilarCities(cityName);
+
+        if (similarCities.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Nessuna città simile trovata o città non esistente.");
+        }
+
+        return ResponseEntity.ok(similarCities);
     }
 }

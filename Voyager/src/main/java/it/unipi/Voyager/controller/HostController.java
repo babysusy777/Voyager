@@ -2,9 +2,7 @@ package it.unipi.Voyager.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import it.unipi.Voyager.config.Neo4jSyncService;
-import it.unipi.Voyager.dto.HostHotelUpdateRequest;
-import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
-import it.unipi.Voyager.dto.VisibilityGapDTO;
+import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.HotelRepository;
 import it.unipi.Voyager.service.CityService;
@@ -14,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import it.unipi.Voyager.dto.HostHotelRequest;
 import it.unipi.Voyager.model.Host;
 import it.unipi.Voyager.model.Hotel;
 
@@ -98,8 +95,8 @@ public class HostController {
         };
     }
 
-
-//non riesco a far modificare l'hotel nella città
+    @Operation(summary = "Update hotel details",
+            description = "Allows a host to update one or more details of their hotel. The request body must include host email, hotelName and cityName as identifiers. All other fields (averagePrice, description, facilities, hotelRating) are optional — only non-null fields will be updated. Returns 403 if the host does not own the specified hotel.")
     @PutMapping("/update-hotel")
     public ResponseEntity<?> updateHotelInformation(@RequestBody HostHotelUpdateRequest request) {
         try {
@@ -147,24 +144,6 @@ public class HostController {
         }
     }
 
-
-/*
-
-    // VERSIONE CON LOOKUP
-    @GetMapping("/{username}/visibility-gap")
-    public ResponseEntity<List<VisibilityGapDTO>> getVisibilityGap(@PathVariable String username) {
-
-        List<VisibilityGapDTO> report = hostService.getHostVisibilityGap(username);
-
-        if (report.isEmpty()) {
-            // Restituiamo 204 No Content se l'host non esiste o non ha hotel
-            return ResponseEntity.noContent().build();
-        }
-
-        return ResponseEntity.ok(report);
-    } */
-
-    // VERSIONE CON CAMPO PRECALCOLATO
     @Operation(summary = "Visibility gap analysis",
             description = "Compares the host's hotel total visits against the average visits of hotels in the same city and category. Returns the gap value: negative means below average, positive means above average.")
     @GetMapping("/{email}/gap-simple")
@@ -187,20 +166,8 @@ public class HostController {
         return ResponseEntity.ok(result);
     }
 
-    @Operation(summary = "Find similar cities",
-            description = "Returns a list of cities similar to the given one, based on shared attraction categories.")
-    @GetMapping("/analysis/similar-cities")
-    public ResponseEntity<?> getSimilarCities(@RequestParam String cityName) {
-        List<Map<String, Object>> similarCities = cityGraphService.getSimilarCities(cityName);
-
-        if (similarCities.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Nessuna città simile trovata o città non esistente.");
-        }
-
-        return ResponseEntity.ok(similarCities);
-    }
-
+    @Operation(summary = "Delete hotel",
+            description = "Permanently deletes a hotel identified by hotelName and cityName. The operation is cascading: removes the hotel reference from the host profile, updates city-level metrics (hotel count and hybrid arrays), and finally deletes the hotel document from the main collection. Requires the host email for ownership resolution.")
     @DeleteMapping("/delete-hotel")
     public ResponseEntity<?> deleteHotel(
             @RequestParam String email,
