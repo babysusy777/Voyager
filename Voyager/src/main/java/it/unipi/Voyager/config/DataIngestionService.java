@@ -14,10 +14,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 @Order(1) // Eseguito prima del DatabaseInitializer
@@ -283,20 +280,11 @@ public class DataIngestionService {
                         .find(new Document("cityName", cityName))
                         .forEach(allHotelsInCity::add);
 
-                // Ordinamento: Stelle (decrescente) e poi Prezzo (crescente)
-                allHotelsInCity.sort((h1, h2) -> {
-                    int s1 = parseStars(h1.getString("HotelRating"));
-                    int s2 = parseStars(h2.getString("HotelRating"));
-                    if (s1 != s2) return Integer.compare(s2, s1); // Stelle desc
+                // --- PARTIAL EMBEDDING (20 casuali) ---
+                Collections.shuffle(allHotelsInCity);
 
-                    double p1 = h1.getDouble("average_price_per_night") != null ? h1.getDouble("average_price_per_night") : 0.0;
-                    double p2 = h2.getDouble("average_price_per_night") != null ? h2.getDouble("average_price_per_night") : 0.0;
-                    return Double.compare(p1, p2); // Prezzo asc
-                });
-
-                // --- PARTIAL EMBEDDING (Top 5) ---
                 List<Document> topValueHotels = new ArrayList<>();
-                int limit = Math.min(allHotelsInCity.size(), 5);
+                int limit = Math.min(allHotelsInCity.size(), 20);
                 for (int i = 0; i < limit; i++) {
                     Document h = allHotelsInCity.get(i);
                     topValueHotels.add(new Document()

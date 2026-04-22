@@ -3,12 +3,18 @@ package it.unipi.Voyager.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import it.unipi.Voyager.config.Neo4jSyncService;
 import it.unipi.Voyager.dto.*;
+import it.unipi.Voyager.model.City;
+import it.unipi.Voyager.repository.CityRepository;
 import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.HotelRepository;
 import it.unipi.Voyager.service.CityService;
 import it.unipi.Voyager.service.HostService;
 import it.unipi.Voyager.service.graph.CityGraphService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +47,12 @@ public class HostController {
     @Autowired
     private CityService cityService;
 
+    @Autowired
+    private CityRepository cityRepository;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
+
     @Operation(summary = "Add a new hotel",
             description = "Creates a new hotel associated with the authenticated host.")
     @PostMapping("/add-hotel")
@@ -49,6 +61,11 @@ public class HostController {
             // 1. Trova l'host
             Host host = hostRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("Host not found"));
+
+            // 2. Trova la città (Assicurati di avere un CityRepository)
+
+            City city = cityRepository.findByName(request.getCityName())
+                    .orElseThrow(() -> new RuntimeException("City not found"));
 
             // 2. Crea il nuovo documento Hotel
             Hotel hotel = new Hotel();
@@ -76,7 +93,16 @@ public class HostController {
             host.getHotels().add(ref);
             hostRepository.save(host);
 
-            return ResponseEntity.ok("Hotel created and registered successfully");
+            // 5. Update City: Document Linking & Stats
+            mongoTemplate.updateFirst(
+                    Query.query(Criteria.where("cityName").is(request.getCityName())),
+                    new Update()
+                            .push("other_hotel_ids", savedHotel.getId())
+                            .inc("city_index.hotel_count", 1),
+                    "cities"
+            );
+
+            return ResponseEntity.ok("Hotel created and linked to Host and City successfully");
 
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -179,6 +205,8 @@ public class HostController {
                     .orElseThrow(() -> new RuntimeException("Hotel not found in this city"));
 
             String hotelId = hotel.getId();
+
+            neo4jSyncService.deleteHotelNode(hotelName, cityName);
 
             // 2. Aggiorno l'Host (toglie il link nel profilo)
             hostService.removeHotelReferenceFromHost(email, hotelId);

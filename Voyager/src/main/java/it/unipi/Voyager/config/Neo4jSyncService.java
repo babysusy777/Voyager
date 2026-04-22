@@ -7,6 +7,7 @@ import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -17,7 +18,12 @@ import java.util.Map;
 @Service
 public class Neo4jSyncService {
 
-    @Autowired private MongoTemplate mongoTemplate;
+    @Autowired
+    private MongoTemplate mongoTemplate; // Per MongoDB
+
+    @Autowired
+    private Neo4jClient neo4jClient;
+
     @Autowired private TravellerGraphRepository travellerGraphRepository;
     @Autowired private HotelGraphRepository hotelGraphRepository;
     @Autowired private CityGraphRepository cityGraphRepository;
@@ -182,6 +188,7 @@ public class Neo4jSyncService {
                 tripNodes.add(tripNode);
             }
         }
+        travellerGraphRepository.deleteTripsByEmail(email);
         node.setTrips(tripNodes);
         travellerGraphRepository.save(node);
     }
@@ -231,6 +238,20 @@ public class Neo4jSyncService {
         hotelNode.setCity(cityNode);
         hotelNode.setNearbyAttractions(nearRels);
         hotelGraphRepository.save(hotelNode);
+    }
+
+    public void deleteHotelNode(String hotelName, String cityName) {
+        // 1. Proviamo a cancellare l'hotel basandoci sul nome.
+        // Se l'hotel è legato a una città come nodo, usiamo una query che segue la relazione.
+        String cypher =
+                "MATCH (h:Hotel {hotelName: $hotelName}) " +
+                        "DETACH DELETE h";
+
+        neo4jClient.query(cypher)
+                .bind(hotelName).to("hotelName")
+                .run();
+
+        System.out.println("[Neo4j] Tentata cancellazione nodo Hotel: " + hotelName);
     }
 
     // ─── UTILITY ──────────────────────────────────────────────────

@@ -137,4 +137,9 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
         RETURN t.travelType
     """)
     String computeAndStoreTravelType(String email);
+
+    @Query("MATCH (t:Traveller {email: $email})-[r:MADE_TRIP]->(trip:Trip) " +
+            "OPTIONAL MATCH (trip)-[s:STAYED_AT]->() " +
+            "DELETE s, r, trip")
+    void deleteTripsByEmail(String email);
 }

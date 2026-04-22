@@ -143,9 +143,6 @@ public class TravellerService {
     }
 
     public void upsertTrip(String email, TripDTO tripDto) {
-        //Document tripDoc = new Document();
-        //mongoTemplate.getConverter().write(tripDto, tripDoc);
-
         Traveller traveller = travellerRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
 

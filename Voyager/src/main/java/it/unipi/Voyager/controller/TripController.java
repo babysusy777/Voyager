@@ -56,8 +56,8 @@ public class TripController {
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
-    @Operation(summary = "Create or update a trip",
-            description = "Inserts a new trip for the given traveller.")
+    @Operation(summary = "Create a trip",
+            description = "Inserts a new trip for the given traveller. Rating is from 1 to 5")
     @PostMapping("/{email}/upsert")
     public ResponseEntity<String> upsertTrip(
             @PathVariable String email,
@@ -79,20 +79,6 @@ public class TripController {
                     .body("Internal error.");
         }
     }
-
-    // DELETE TRIP
-//    @DeleteMapping("/{email}/{tripName}")
-//    public ResponseEntity<String> deleteTrip(
-//            @PathVariable String email,
-//            @PathVariable String tripName) {
-//
-//        try {
-//            travellerService.deleteTrip(email, tripName);
-//            return ResponseEntity.ok("Viaggio '" + tripName + "' rimosso correttamente.");
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-//        }
-//    }
 
     @Operation(summary = "Get all trips of a traveller",
             description = "Returns the list of past trips for the given user, ordered by date.")

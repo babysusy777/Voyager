@@ -94,6 +94,9 @@ public class HotelService {
                         .append(seasonField, 1))
         );
 
+        /**
+         * SOS Relazionalità: trip->hotel->prendo il rating dell'Hotel per andare in City e ricalcolare city_category_avg !!!
+        */
         // Step 2: recupera rating per ricalcolare city_category_avg (cityName già noto)
         Document hotel = mongoTemplate.getCollection("hotels")
                 .find(new Document("HotelName", hotelName).append("cityName", cityName))

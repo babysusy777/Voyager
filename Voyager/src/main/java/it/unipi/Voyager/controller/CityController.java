@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -36,7 +38,7 @@ public class CityController {
     private AttractionService attractionService;
 
     @Operation(summary = "Search city by name",
-            description = "Returns general information about a city given its exact name, including cost of living, safety notes, best time to visit, and the top value hotels ranked by average price. Returns 404 if the city is not found.")
+            description = "Returns general information about a city given its exact name, including cost of living, safety notes, best time to visit, and up to 20 randomly sampled hotels. Returns 404 if the city is not found.")
     @GetMapping("/search")
     public ResponseEntity<CityDTO> getCityByName(@RequestParam String name) {
         return cityRepository.findByName(name)
