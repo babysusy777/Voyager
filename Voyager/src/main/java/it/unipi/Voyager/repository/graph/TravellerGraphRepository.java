@@ -71,32 +71,30 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
 
     // Recommendations
     @Query("""
-                MATCH (me:Traveller {email: $email})-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:NEAR_TO]->(a:Attraction)
-                WITH me, collect(DISTINCT a.category) AS myPreferredCategories
-            
-                MATCH (me)-[sim:SIMILAR_TO]->(other:Traveller)
-                WHERE sim.score > 2.0
-            
-                OPTIONAL MATCH (me)-[:MADE_TRIP]->(:Trip)-[:IN_CITY]->(visitedCity:City)
-                WITH me, other, sim.score AS similarityScore, myPreferredCategories, collect(DISTINCT visitedCity) AS myCities
-            
-                MATCH (other)-[:MADE_TRIP]->(t:Trip)-[:STAYED_AT]->(h:Hotel)-[:LOCATED_IN]->(newCity:City)
-                WHERE NOT newCity IN myCities
-            
-                OPTIONAL MATCH (newCity)<-[:IN_CITY]-(cityAttr:Attraction)
-                WHERE cityAttr.category IN myPreferredCategories
-                WITH me, h, newCity, similarityScore, myPreferredCategories, count(DISTINCT cityAttr) AS cityMatchCount
-            
-                OPTIONAL MATCH (h)-[:NEAR_TO]->(hotelAttr:Attraction)
-                WHERE hotelAttr.category IN myPreferredCategories
-                WITH newCity, h, similarityScore, cityMatchCount, count(DISTINCT hotelAttr) AS hotelMatchCount
-            
-                WITH newCity, h,
-                     (similarityScore * 2) + (cityMatchCount * 1) + (hotelMatchCount * 2) AS finalScore
-                RETURN newCity.cityName AS cityName, h.hotelName AS hotelName, toFloat(finalScore) AS finalScore
-                ORDER BY finalScore DESC
-                LIMIT 10
-            """)
+        MATCH (me:Traveller {email: $email})-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:NEAR_TO]->(a:Attraction)
+        WITH me, collect(DISTINCT a.category) AS myPreferredCategories
+
+        OPTIONAL MATCH (me)-[:MADE_TRIP]->(:Trip)-[:IN_CITY]->(visitedCity:City)
+        WITH me, myPreferredCategories, collect(DISTINCT visitedCity) AS myCities
+
+        MATCH (h:Hotel)-[:LOCATED_IN]->(newCity:City)
+        WHERE NOT newCity IN myCities
+
+        OPTIONAL MATCH (newCity)<-[:IN_CITY]-(cityAttr:Attraction)
+        WHERE cityAttr.category IN myPreferredCategories
+        WITH me, h, newCity, myPreferredCategories, count(DISTINCT cityAttr) AS cityMatchCount
+
+        OPTIONAL MATCH (h)-[:NEAR_TO]->(hotelAttr:Attraction)
+        WHERE hotelAttr.category IN myPreferredCategories
+        WITH newCity, h, cityMatchCount, count(DISTINCT hotelAttr) AS hotelMatchCount
+
+        WITH newCity, h,
+             (cityMatchCount * 1) + (hotelMatchCount * 2) AS finalScore
+        WHERE finalScore > 0
+        RETURN newCity.cityName AS cityName, h.hotelName AS hotelName, toFloat(finalScore) AS finalScore
+        ORDER BY finalScore DESC
+        LIMIT 10
+    """)
     List<RecommendationDTO> getPersonalizedRecommendations(String email);
 
     // Bulk — inizializzazione

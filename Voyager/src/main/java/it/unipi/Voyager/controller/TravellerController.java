@@ -98,8 +98,7 @@ public class TravellerController {
     }
 
     @Operation(summary = "City and Hotel recommendations for the traveller",
-            description = "Returns a ranked list of hotels based on compatibility with the user's preferences, behavioral segment, and travel history. Final score combines multiple factors (season, budget, category match).")
-    @GetMapping("/recommendations")
+            description = "Returns a ranked list of hotels based on travel history.")
     public ResponseEntity<List<RecommendationDTO>> getRecommendations(@RequestParam String email) {
         travellerGraphRepository.computeAndSaveSimilarity(email);
         List<RecommendationDTO> recommendations = travellerGraphRepository.getPersonalizedRecommendations(email);
