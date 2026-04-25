@@ -1,7 +1,9 @@
 package it.unipi.Voyager.service;
 
-import it.unipi.Voyager.dto.CityIndexDTO;
+import it.unipi.Voyager.dto.HotelConcentrationDTO;
 import it.unipi.Voyager.dto.FacilitiesGapDTO;
+import it.unipi.Voyager.dto.HotelConcentrationDTO;
+import it.unipi.Voyager.model.Host;
 import it.unipi.Voyager.model.Hotel;
 import it.unipi.Voyager.repository.HotelRepository;
 import org.bson.Document;
@@ -55,21 +57,9 @@ public class HotelService {
         System.out.println("Update completato per " + cityName + " [" + hotelRating + "]");
     }
 
-    public FacilitiesGapDTO getFacilitiesGap(String hotelName, String cityName) {
-        Hotel hotel = hotelRepository.findByHotelNameAndCityName(hotelName, cityName)
-                .orElseThrow(() -> new RuntimeException("Hotel not found"));
-
-        return hotelRepository.getFacilitiesGap(
-                hotel.getCityName(),
-                hotel.getHotelRating(),
-                hotel.getHotelName(),
-                hotel.getFacilities()
-        );
-    }
-
-    public CityIndexDTO getCityIndex(String cityName) {
+    public HotelConcentrationDTO getHotelConcentration(String cityName) {
         // Chiamata diretta alla repository con il parametro di filtro
-        CityIndexDTO index = hotelRepository.getCityIndex(cityName);
+        HotelConcentrationDTO index = hotelRepository.getHotelConcentration(cityName);
 
         // Se la repository restituisce null (nessun hotel trovato per quella città)
         if (index == null) {

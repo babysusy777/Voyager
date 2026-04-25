@@ -3,7 +3,7 @@ package it.unipi.Voyager.dto;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 
-public class CityIndexDTO {
+public class HotelConcentrationDTO {
 
     @Field("cityName")
     private String cityName;

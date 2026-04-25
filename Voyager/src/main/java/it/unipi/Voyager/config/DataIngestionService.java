@@ -241,8 +241,6 @@ public class DataIngestionService {
             return;
         }
         try {
-            // --- FIX ERRORE 51183: Creazione Indice Univoco ---
-            // Questo garantisce che cityName sia unico e permette a $merge di funzionare negli step successivi
             mongoTemplate.getCollection("cities").createIndex(
                     new Document("cityName", 1),
                     new com.mongodb.client.model.IndexOptions().unique(true)
@@ -263,16 +261,6 @@ public class DataIngestionService {
                 doc.append("category",          node.path("category").asText());
                 doc.append("best_time_to_visit", node.path("best_time_to_visit").asText());
 
-                // 1. Seasonality
-                JsonNode s = node.path("seasonality");
-                doc.append("seasonality", new Document()
-                        .append("spring", s.path("spring").asInt())
-                        .append("summer", s.path("summer").asInt())
-                        .append("autumn", s.path("autumn").asInt())
-                        .append("winter", s.path("winter").asInt())
-                        .append("peak_season",         s.path("peak_season").asText())
-                        .append("concentration_ratio", s.path("concentration_ratio").asDouble())
-                );
 
                 // 2. Recupero Hotel della città per strategia IBRIDA
                 List<Document> allHotelsInCity = new ArrayList<>();

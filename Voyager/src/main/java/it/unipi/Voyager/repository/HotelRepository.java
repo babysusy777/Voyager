@@ -1,6 +1,6 @@
 package it.unipi.Voyager.repository;
 
-import it.unipi.Voyager.dto.CityIndexDTO;
+import it.unipi.Voyager.dto.HotelConcentrationDTO;
 import it.unipi.Voyager.dto.FacilitiesGapDTO;
 import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
 import it.unipi.Voyager.model.Hotel;
@@ -99,5 +99,5 @@ public interface HotelRepository extends MongoRepository<Hotel, String> {
                     "} } " +
                     "} }"
     })
-    CityIndexDTO getCityIndex(String cityName);
+    HotelConcentrationDTO getHotelConcentration(String cityName);
 }

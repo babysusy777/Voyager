@@ -9,6 +9,7 @@ import it.unipi.Voyager.repository.HostRepository;
 import it.unipi.Voyager.repository.HotelRepository;
 import it.unipi.Voyager.service.CityService;
 import it.unipi.Voyager.service.HostService;
+import it.unipi.Voyager.service.HotelService;
 import it.unipi.Voyager.service.graph.CityGraphService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -31,6 +32,9 @@ public class HostController {
 
     @Autowired
     private CityGraphService cityGraphService;
+
+    @Autowired
+    private HotelService hotelService;
 
     @Autowired
     private HostRepository hostRepository;
@@ -125,20 +129,17 @@ public class HostController {
     @PutMapping("/update-hotel")
     public ResponseEntity<?> updateHotelInformation(@RequestBody HostHotelUpdateRequest request) {
         try {
-            // 1. Trova l'hotel per Nome e Città
-            Hotel hotel = hotelRepository.findByHotelNameAndCityName(request.getHotelName(), request.getCityName())
-                    .orElseThrow(() -> new RuntimeException("Hotel not found in this city"));
-
-            // 2. Verifica che l'host esista e possieda questo specifico ID hotel
             Host host = hostRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("Host not found"));
 
-            boolean owns = host.getHotels() != null && host.getHotels().stream()
-                    .anyMatch(h -> h.getHotelId().equals(hotel.getId()));
+            Host.HotelReference targetRef = host.getHotels().stream()
+                    .filter(h -> h.getHotelName().equalsIgnoreCase(request.getHotelName()) &&
+                            h.getCity().equalsIgnoreCase(request.getCityName()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Hotel not found in your management list"));
 
-            if (!owns) {
-                return ResponseEntity.status(403).body("Host couldn't modify this hotel");
-            }
+            Hotel hotel = hotelRepository.findById(targetRef.getHotelId())
+                    .orElseThrow(() -> new RuntimeException("Hotel data inconsistency: ID not found in global collection"));
 
             // 3. Aggiorna i dati nel documento Hotel
             if (request.getAveragePrice() != null) hotel.setAveragePrice(request.getAveragePrice());
@@ -199,11 +200,16 @@ public class HostController {
             @RequestParam String hotelName,
             @RequestParam String cityName) {
         try {
-            // 1. Recupero l'hotel per trovare l'ID reale (fondamentale per pulire Host e City)
-            Hotel hotel = hotelRepository.findByHotelNameAndCityName(hotelName, cityName)
-                    .orElseThrow(() -> new RuntimeException("Hotel not found in this city"));
+            Host host = hostRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Host not found"));
 
-            String hotelId = hotel.getId();
+            Host.HotelReference targetRef = host.getHotels().stream()
+                    .filter(h -> h.getHotelName().equalsIgnoreCase(hotelName) &&
+                            h.getCity().equalsIgnoreCase(cityName))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Hotel not found in your management list. Operation aborted."));
+
+            String hotelId = targetRef.getHotelId();
 
             neo4jSyncService.deleteHotelNode(hotelName, cityName);
 
@@ -223,6 +229,15 @@ public class HostController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error.");
         }
+    }
+
+    @Operation(summary = "Facilities gap analysis for the host's hotel",
+            description = "Returns the list of facilities offered by competitor hotels in the same city and category that are missing from the host's hotel.")
+    @GetMapping("/host/facilities-gap")
+    public ResponseEntity<FacilitiesGapDTO> getFacilitiesGap(@RequestParam String email, @RequestParam String hotelName, @RequestParam String cityName) {
+        FacilitiesGapDTO result = hostService.getFacilitiesGap(email, hotelName, cityName);
+        if (result == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(result);
     }
 
 }

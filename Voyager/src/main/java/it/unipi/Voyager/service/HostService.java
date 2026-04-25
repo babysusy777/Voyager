@@ -1,6 +1,7 @@
 package it.unipi.Voyager.service;
 
 import it.unipi.Voyager.dto.FacilitiesGapDTO;
+import it.unipi.Voyager.dto.HostHotelUpdateRequest;
 import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
 import it.unipi.Voyager.dto.VisibilityGapDTO;
 import it.unipi.Voyager.model.Host;
@@ -28,7 +29,6 @@ public class HostService {
 
     @Autowired
     private HostRepository hostRepository;
-
 
     public List<VisibilityGapDTO> getGapSimple(String email) {
         // 1. Recupero l'host
@@ -114,6 +114,28 @@ public class HostService {
                 hostRepository.save(host);
             }
         }
+
+    public FacilitiesGapDTO getFacilitiesGap(String email, String hotelName, String cityName) {
+
+        Host host = hostRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Host not found"));
+
+        Host.HotelReference targetRef = host.getHotels().stream()
+                .filter(h -> h.getHotelName().equalsIgnoreCase(hotelName) &&
+                        h.getCity().equalsIgnoreCase(cityName))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Hotel not found in your management list"));
+
+        Hotel hotel = hotelRepository.findById(targetRef.getHotelId())
+                .orElseThrow(() -> new RuntimeException("Hotel data inconsistency: ID not found in global collection"));
+
+        return hotelRepository.getFacilitiesGap(
+                hotel.getCityName(),
+                hotel.getHotelRating(),
+                hotel.getHotelName(),
+                hotel.getFacilities()
+        );
+    }
     }
 
 

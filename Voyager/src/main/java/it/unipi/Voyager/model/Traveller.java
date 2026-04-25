@@ -81,12 +81,12 @@ public class Traveller {
         private String budget;
 
         public static class HotelSummary {
+
             @Field("hotelName")
             private String hotelName;
 
             @Field("hotelStars")
             private String hotelStars;
-
 
             public HotelSummary() {}
 
@@ -94,6 +94,7 @@ public class Traveller {
                 this.hotelName = name;
                 this.hotelStars = stars;
             }
+
             public String getHotelName() { return hotelName; }
             public void setHotelName(String hotelName) { this.hotelName = hotelName; }
 

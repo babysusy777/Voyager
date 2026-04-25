@@ -10,7 +10,6 @@ import java.util.List;
 @CompoundIndex(name = "city_name_unique_idx", def = "{'cityName': 1}", unique = true)
 public class City {
 
-
     @Field("cityName")
     private String name;
 
@@ -29,44 +28,10 @@ public class City {
     @Field("city_index")
     private CityIndex cityIndex;
 
-    private Seasonality seasonality;
-
     @Field("top_value_hotels")
     private List<HotelSummary> topValueHotels;
     @Field("other_hotel_ids")
     private List<String> otherHotelIds;
-
-    public static class Seasonality {
-        private int spring;
-        private int summer;
-        private int autumn;
-        private int winter;
-
-        @Field("peak_season")
-        private String peakSeason;
-
-        @Field("concentration_ratio")
-        private double concentrationRatio;
-
-        // Getters & Setters
-        public int getSpring() { return spring; }
-        public void setSpring(int spring) { this.spring = spring; }
-
-        public int getSummer() { return summer; }
-        public void setSummer(int summer) { this.summer = summer; }
-
-        public int getAutumn() { return autumn; }
-        public void setAutumn(int autumn) { this.autumn = autumn; }
-
-        public int getWinter() { return winter; }
-        public void setWinter(int winter) { this.winter = winter; }
-
-        public String getPeakSeason() { return peakSeason; }
-        public void setPeakSeason(String peakSeason) { this.peakSeason = peakSeason; }
-
-        public double getConcentrationRatio() { return concentrationRatio; }
-        public void setConcentrationRatio(double concentrationRatio) { this.concentrationRatio = concentrationRatio; }
-    }
 
     public static class CityIndex {
 
@@ -115,34 +80,6 @@ public class City {
 
     }
 
-   /* public static class AttractionSummary {
-        //@Field("attraction_id")
-        //private String attractionId;
-
-        private String name;
-        @Field("category")
-        private String type;
-
-        @Field("centrality_score")
-        private double centralityScore;
-
-        // Getters & Setters
-        //public String getAttractionId() { return attractionId; }
-        //public void setAttractionId(String attractionId) { this.attractionId = attractionId; }
-
-        public String getName() { return name; }
-        public void setName(String name) { this.name = name; }
-
-        public String getType() { return type; }
-        public void setType(String type) { this.type = type; }
-
-        public double getCentralityScore() { return centralityScore; }
-        public void setCentralityScore(double centralityScore) { this.centralityScore = centralityScore; }
-    }*/
-
-    // ─── Getters & Setters (City) ─────────────────────────────────
-
-
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
@@ -160,10 +97,6 @@ public class City {
 
     public CityIndex getCityIndex() { return cityIndex; }
     public void setCityIndex(CityIndex cityIndex) { this.cityIndex = cityIndex; }
-
-    public Seasonality getSeasonality() { return seasonality; }
-    public void setSeasonality(Seasonality seasonality) { this.seasonality = seasonality; }
-
 
     public List<HotelSummary> getTopValueHotels() { return topValueHotels; }
     public void setTopValueHotels(List<HotelSummary> topValueHotels) { this.topValueHotels = topValueHotels; }

@@ -53,6 +53,9 @@ public class Neo4jSyncService {
                 CityNode cityNode = cityGraphRepository.findById(cityName)
                         .orElse(new CityNode());
                 cityNode.setCityName(cityName);
+                cityNode.setCostOfLiving((String) cityDoc.get("costOfLiving"));
+                cityNode.setCategory((String) cityDoc.get("category"));
+                cityNode.setBestTimeToVisit((String) cityDoc.get("bestTimeToVisit"));
                 cityGraphRepository.save(cityNode);
 
                 List<Map<String, Object>> attractions = (List<Map<String, Object>>) cityDoc.get("attractions");

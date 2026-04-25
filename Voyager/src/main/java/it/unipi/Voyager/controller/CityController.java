@@ -66,21 +66,7 @@ public class CityController {
         );
     }
 
-    @Operation(summary = "City supply-demand index",
-            description = "Returns a supply-demand analysis for a given city, computed as the ratio of total guest visits to number of hotels (demandRatio). Cities are classified as UNDERSUPPLIED (demandRatio > 5, high demand relative to supply), OVERSUPPLIED (demandRatio < 0.5, too many hotels for actual demand), or BALANCED otherwise. Useful for hosts evaluating market saturation before opening a new property.")
-    @GetMapping("/host/city-index")
-    public ResponseEntity<?> getCityIndex(@RequestParam String cityName) {
-        try {
-            CityIndexDTO index = hotelService.getCityIndex(cityName);
-            return ResponseEntity.ok(index);
-        } catch (RuntimeException e) {
-            // Restituisce 404 se la città non esiste o non ha dati, con il messaggio del Service
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            // Restituisce 500 per errori imprevisti (es. database offline)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
+
 
     @Operation(summary = "Discovery tips for returning travellers",
             description = "For a traveller who has already visited some cities, returns attractions classified as CENTRAL_NEW (top 25% by centrality, with no past hotel stay nearby) or HIDDEN_GEM (bottom 75% by centrality, regardless of proximity to past stays).")

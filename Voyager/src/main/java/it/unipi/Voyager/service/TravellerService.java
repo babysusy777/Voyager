@@ -1,5 +1,7 @@
 package it.unipi.Voyager.service;
 
+import it.unipi.Voyager.config.DatabaseInitializer;
+import it.unipi.Voyager.config.StatsUpdateCounter;
 import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.repository.TravellerRepository;
@@ -8,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.bson.Document;
 import com.mongodb.client.result.UpdateResult;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import it.unipi.Voyager.config.Neo4jSyncService;
 import java.util.ArrayList;
@@ -33,6 +36,12 @@ public class TravellerService {
 
     @Autowired
     private TravellerGraphRepository travellerNodeRepository;
+
+    @Autowired
+    private StatsUpdateCounter statsUpdateCounter;
+
+    @Autowired
+    private DatabaseInitializer databaseInitializer;
 
     public Traveller setPreferences(TravellerConfigRequest request) {
         Traveller traveller = travellerRepository.findByEmail(request.getEmail())
@@ -83,12 +92,6 @@ public class TravellerService {
         return travellerRepository.getTripFrequency(traveller.getEmail());
     }
 
-    public void deleteTrip(String email, TripDTO tripDTO) {
-        Traveller traveller = travellerRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
-
-    }
-
     public void updateTripPartial(String email, String tripName, Map<String, Object> updates) {
         // 1. Costruiamo il filtro per trovare il traveller e lo specifico viaggio nell'array
         Document query = new Document("email", email)
@@ -96,7 +99,6 @@ public class TravellerService {
 
         // 2. Prepariamo i campi di update
         Document setFields = new Document();
-
         updates.forEach((key, value) -> {
             // Mappiamo i campi del DTO/Mappa ai nomi reali sul DB (es: budget, rating_given)
             // Usiamo la sintassi past_trips.$.nomeCampo
@@ -116,20 +118,22 @@ public class TravellerService {
         UpdateResult result = mongoTemplate.getCollection("travellers")
                 .updateOne(query, new Document("$set", setFields));
 
-        if (result.getMatchedCount() > 0) {
-            // 4. Se l'update ha toccato campi sensibili, ricalcoliamo segmenti e sync
-            // Nota: Qui potresti voler aggiungere un controllo se 'updates' contiene budget o rating
-            TravellerSegmentDTO newSegment = travellerRepository.computeSegment(email);
-            if (newSegment != null) {
-                mongoTemplate.getCollection("travellers").updateOne(
-                        new Document("email", email),
-                        new Document("$set", new Document("user_segment", newSegment.getSegment()))
-                );
-            }
-            travellerNodeRepository.computeAndStoreTravelType(email);
-            neo4jSyncService.syncTravellerByEmail(email);
-        } else {
+        if (result.getMatchedCount() == 0) {
             throw new RuntimeException("Viaggio o Traveller non trovato.");
+        }
+
+        // ── Ricalcolo user_segment (sempre) ──────────────────────
+        TravellerSegmentDTO newSegment = travellerRepository.computeSegment(email);
+        if (newSegment != null) {
+            mongoTemplate.getCollection("travellers").updateOne(
+                    new Document("email", email),
+                    new Document("$set", new Document("user_segment", newSegment.getSegment()))
+            );
+        }
+
+        // ── Batch: stesso contatore condiviso ────────────────────
+        if (statsUpdateCounter.increment()) {
+            recomputeAllStatsAsync();
         }
     }
 
@@ -177,25 +181,10 @@ public class TravellerService {
                 .append("date", tripDto.getDate())
                 .append("rating_given", tripDto.getRatingGiven()).append("budget", tripDto.getBudget());
 
-
-
             mongoTemplate.getCollection("travellers").updateOne(
                     new Document("email", email),
                     new Document("$push", new Document("past_trips", newTrip))
             );
-        }
-
-        // Writeback hotel stats
-        if (tripDto.getHotels() != null) {
-            for (Traveller.Trip.HotelSummary hotel : tripDto.getHotels()) {
-                hotelService.updateHotelStatsOnNewTrip(
-                        hotel.getHotelName(),
-                        tripDto.getCity(),            // ← aggiunto
-                        tripDto.getSeason(),
-                        traveller.getUserSegment(),
-                        tripDto.getBudget()
-                );
-            }
         }
 
         // Ricalcola e aggiorna user_segment del traveller
@@ -207,10 +196,32 @@ public class TravellerService {
             );
         }
 
-        // Sync Neo4j dopo update
-        // Ricalcola travelType sul nodo Neo4j dopo un nuovo trip
-        neo4jSyncService.syncTravellerByEmail(email);
-        travellerNodeRepository.computeAndStoreTravelType(email);
+        if (statsUpdateCounter.increment()) {
+            recomputeAllStatsAsync();
+        }
+    }
+
+    @Async
+    private void recomputeAllStatsAsync() {
+        recomputeAllStats();
+    }
+
+    private void recomputeAllStats() {
+        System.out.println("[Stats] Soglia raggiunta — ricalcolo statistiche...");
+
+        // Pipeline 1: trip → hotel
+        databaseInitializer.populateGuestStats();
+        databaseInitializer.populateCityCategoryAvgVisits();
+        databaseInitializer.populateSegmentAndPreferenceDistribution();
+
+        // Pipeline 2: trip → city (separata e indipendente)
+        databaseInitializer.updateCityIndexes();
+
+        // Neo4j sync
+        neo4jSyncService.syncAll();
+        travellerNodeRepository.computeAndStoreTravelTypeAll();
+
+        System.out.println("[Stats] Ricalcolo completato.");
     }
 
     public List<Traveller.Trip> getTripsSortedByDate(String email) {
