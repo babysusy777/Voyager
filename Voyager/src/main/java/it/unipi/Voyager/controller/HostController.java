@@ -63,7 +63,6 @@ public class HostController {
                     .orElseThrow(() -> new RuntimeException("Host not found"));
 
             // 2. Trova la città (Assicurati di avere un CityRepository)
-
             City city = cityRepository.findByName(request.getCityName())
                     .orElseThrow(() -> new RuntimeException("City not found"));
 

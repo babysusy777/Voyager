@@ -29,70 +29,9 @@ public class HostService {
     @Autowired
     private HostRepository hostRepository;
 
-   /* // VERSIONE CON LOOKUP
-    public List<VisibilityGapDTO> getHostVisibilityGap(String username) {
 
-        List<Document> pipeline = Arrays.asList(
-
-                new Document("$match", new Document("username", username)),
-
-                new Document("$unwind", "$hotels"),
-
-                // 3. LOOKUP PEER STATS (Sub-pipeline complessa)
-                new Document("$lookup", new Document("from", "hotels")
-                        .append("let", new Document("hCity", "$hotels.city")
-                                .append("hStars", "$hotels.stars"))
-                        .append("pipeline", Arrays.asList(
-                                new Document("$match", new Document("$expr",
-                                        new Document("$and", Arrays.asList(
-                                                new Document("$eq", Arrays.asList("$cityName", "$$hCity")),
-                                                new Document("$eq", Arrays.asList("$HotelRating",
-                                                        new Document("$switch", new Document("branches", Arrays.asList(
-                                                                new Document("case", new Document("$eq", Arrays.asList("$$hStars", 1))).append("then", "oneStar"),
-                                                                new Document("case", new Document("$eq", Arrays.asList("$$hStars", 2))).append("then", "twoStar"),
-                                                                new Document("case", new Document("$eq", Arrays.asList("$$hStars", 3))).append("then", "threeStar"),
-                                                                new Document("case", new Document("$eq", Arrays.asList("$$hStars", 4))).append("then", "fourStar"),
-                                                                new Document("case", new Document("$eq", Arrays.asList("$$hStars", 5))).append("then", "fiveStar")
-                                                        )).append("default", "Unknown")))
-                                                )
-                                        ))
-                                )),
-                                new Document("$group", new Document("_id", null)
-                                        .append("avgVisits", new Document("$avg", "$guestStats.totalVisits")))
-                        ))
-                        .append("as", "peerData")),
-
-                // 4. LOOKUP ACTUAL STATS (Join semplice)
-                new Document("$lookup", new Document("from", "hotels")
-                        .append("localField", "hotels.hotel_id")
-                        .append("foreignField", "_id")
-                        .append("as", "actualHotelInfo")),
-
-                // 5. PROJECTION & GAP CALCULATION
-                new Document("$project", new Document("hotelName", "$hotels.hotel_name")
-                        .append("city", "$hotels.city")
-                        .append("category", "$hotels.stars")
-                        .append("actualVisits", new Document("$arrayElemAt", Arrays.asList("$actualHotelInfo.guestStats.totalVisits", 0)))
-                        .append("averagePeerVisits", new Document("$arrayElemAt", Arrays.asList("$peerData.avgVisits", 0)))
-                        .append("gap", new Document("$subtract", Arrays.asList(
-                                new Document("$arrayElemAt", Arrays.asList("$actualHotelInfo.guestStats.totalVisits", 0)),
-                                new Document("$arrayElemAt", Arrays.asList("$peerData.avgVisits", 0))
-                        ))))
-        );
-
-
-        List<Document> results = new ArrayList<>();
-        mongoTemplate.getCollection("hosts").aggregate(pipeline).into(results);
-
-
-        return results.stream()
-                .map(doc -> mongoTemplate.getConverter().read(VisibilityGapDTO.class, doc))
-                .collect(Collectors.toList());
-    }*/
-
-    // VERSIONE CAMPO PRECALCOLATO
     public List<VisibilityGapDTO> getGapSimple(String email) {
-        // 1. Recupero l'host (Plain Language)
+        // 1. Recupero l'host
         Document hostFilter = new Document("email", email);
         Document hostDoc = mongoTemplate.getCollection("hosts").find(hostFilter).first();
 

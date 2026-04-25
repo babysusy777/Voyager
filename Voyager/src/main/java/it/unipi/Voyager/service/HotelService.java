@@ -93,7 +93,6 @@ public class HotelService {
                 new Document("$inc", new Document("guestStats.totalVisits", 1)
                         .append(seasonField, 1))
         );
-
         /**
          * SOS Relazionalità: trip->hotel->prendo il rating dell'Hotel per andare in City e ricalcolare city_category_avg !!!
         */
