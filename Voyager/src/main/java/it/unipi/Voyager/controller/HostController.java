@@ -1,7 +1,9 @@
 package it.unipi.Voyager.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import it.unipi.Voyager.config.DatabaseInitializer;
 import it.unipi.Voyager.config.Neo4jSyncService;
+import it.unipi.Voyager.config.StatsUpdateCounterHotel;
 import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.City;
 import it.unipi.Voyager.repository.CityRepository;
@@ -18,13 +20,14 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import it.unipi.Voyager.model.Host;
 import it.unipi.Voyager.model.Hotel;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/host")
@@ -57,6 +60,12 @@ public class HostController {
     @Autowired
     private MongoTemplate mongoTemplate;
 
+    @Autowired
+    private StatsUpdateCounterHotel statsUpdateCounterHotel;
+
+    @Autowired
+    private DatabaseInitializer databaseInitializer;
+
     @Operation(summary = "Add a new hotel",
             description = "Creates a new hotel associated with the authenticated host.")
     @PostMapping("/add-hotel")
@@ -82,8 +91,10 @@ public class HostController {
             // guestStats lasciato null: nessuna visita ancora
 
             Hotel savedHotel = hotelRepository.save(hotel);
-            neo4jSyncService.syncHotelByName(savedHotel.getHotelName(), savedHotel.getCityName());
 
+            if (statsUpdateCounterHotel.increment()) {
+                recomputeAllStatsAsync(Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null));
+            }
             // 3. Costruisci la HotelReference (partial embedding nell'host)
             Host.HotelReference ref = new Host.HotelReference();
             ref.setHotelId(savedHotel.getId());
@@ -110,6 +121,27 @@ public class HostController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @Async
+    private void recomputeAllStatsAsync(Optional<String> email, Optional<String> hotelId, Optional<String> hotelName, Optional<String> cityName) {
+        System.out.println("[Stats] Soglia raggiunta — ricalcolo statistiche...");
+
+        if (email.isPresent()) {
+            // 3. Aggiorno la City (decrementa count e pulisce array ibridi)
+            cityService.removeHotelFromCityMetrics(cityName.get(), hotelId.get(), hotelName.get());
+
+            // 4. Elimino l'Hotel fisicamente dalla collezione principale
+            hotelRepository.deleteById(hotelId.get());
+
+        }
+        else {// Pipeline 2: host_hotel → city (separata e indipendente)
+            databaseInitializer.updateCityIndexes();
+        }
+        // Neo4j sync
+        neo4jSyncService.syncAll();
+
+        System.out.println("[Stats] Ricalcolo completato.");
     }
 
     private int parseStars(String hotelRating) {
@@ -160,8 +192,9 @@ public class HostController {
 
             hotelRepository.save(hotel);
 
-            // 6. Sincronizzazione Neo4j
-            neo4jSyncService.syncHotelByName(hotel.getHotelName(), hotel.getCityName());
+            if (statsUpdateCounterHotel.increment()) {
+                recomputeAllStatsAsync(Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null));
+            }
 
             return ResponseEntity.ok("Hotel updated successfully");
 
@@ -211,10 +244,13 @@ public class HostController {
 
             String hotelId = targetRef.getHotelId();
 
-            neo4jSyncService.deleteHotelNode(hotelName, cityName);
-
             // 2. Aggiorno l'Host (toglie il link nel profilo)
             hostService.removeHotelReferenceFromHost(email, hotelId);
+
+            if (statsUpdateCounterHotel.increment()) {
+                recomputeAllStatsAsync(Optional.of(email), Optional.of(hotelId), Optional.of(hotelName), Optional.of(cityName));
+            }
+
 
             // 3. Aggiorno la City (decrementa count e pulisce array ibridi)
             cityService.removeHotelFromCityMetrics(cityName, hotelId, hotelName);

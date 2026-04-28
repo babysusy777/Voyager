@@ -1,7 +1,7 @@
 package it.unipi.Voyager.service;
 
 import it.unipi.Voyager.config.DatabaseInitializer;
-import it.unipi.Voyager.config.StatsUpdateCounter;
+import it.unipi.Voyager.config.StatsUpdateCounterTrip;
 import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.repository.TravellerRepository;
@@ -38,7 +38,7 @@ public class TravellerService {
     private TravellerGraphRepository travellerNodeRepository;
 
     @Autowired
-    private StatsUpdateCounter statsUpdateCounter;
+    private StatsUpdateCounterTrip statsUpdateCounterTrip;
 
     @Autowired
     private DatabaseInitializer databaseInitializer;
@@ -131,8 +131,8 @@ public class TravellerService {
             );
         }
 
-        // ── Batch: stesso contatore condiviso ────────────────────
-        if (statsUpdateCounter.increment()) {
+        // Batch: stesso contatore condiviso
+        if (statsUpdateCounterTrip.increment()) {
             recomputeAllStatsAsync();
         }
     }
@@ -196,7 +196,7 @@ public class TravellerService {
             );
         }
 
-        if (statsUpdateCounter.increment()) {
+        if (statsUpdateCounterTrip.increment()) {
             recomputeAllStatsAsync();
         }
     }

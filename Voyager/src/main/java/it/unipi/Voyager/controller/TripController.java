@@ -34,10 +34,10 @@ public class TripController {
 
         try {
             travellerService.updateTripPartial(email, tripName, updates);
-            return ResponseEntity.ok("Viaggio '" + tripName + "' aggiornato con successo.");
+            return ResponseEntity.ok("Trip '" + tripName + "' successfully updated.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Errore durante l'aggiornamento: " + e.getMessage());
+                    .body("Error in update: " + e.getMessage());
         }
     }
 
