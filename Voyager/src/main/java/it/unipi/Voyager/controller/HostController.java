@@ -6,21 +6,22 @@ import it.unipi.Voyager.config.Neo4jSyncService;
 import it.unipi.Voyager.config.StatsUpdateCounterHotel;
 import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.City;
-import it.unipi.Voyager.repository.CityRepository;
-import it.unipi.Voyager.repository.HostRepository;
-import it.unipi.Voyager.repository.HotelRepository;
+import it.unipi.Voyager.repository.fast.CityRepository;
+import it.unipi.Voyager.repository.strong.HostRepository;
+import it.unipi.Voyager.repository.fast.HotelRepository;
 import it.unipi.Voyager.service.CityService;
 import it.unipi.Voyager.service.HostService;
 import it.unipi.Voyager.service.HotelService;
+import it.unipi.Voyager.service.HotelStatsAsyncService;
 import it.unipi.Voyager.service.graph.CityGraphService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 import it.unipi.Voyager.model.Host;
 import it.unipi.Voyager.model.Hotel;
@@ -33,11 +34,10 @@ import java.util.Optional;
 @RequestMapping("/api/host")
 public class HostController {
 
-    @Autowired
-    private CityGraphService cityGraphService;
 
     @Autowired
-    private HotelService hotelService;
+    private HotelStatsAsyncService hotelStatsAsyncService;
+
 
     @Autowired
     private HostRepository hostRepository;
@@ -48,8 +48,6 @@ public class HostController {
     @Autowired
     private HostService hostService;
 
-    @Autowired
-    private Neo4jSyncService neo4jSyncService;
 
     @Autowired
     private CityService cityService;
@@ -58,13 +56,17 @@ public class HostController {
     private CityRepository cityRepository;
 
     @Autowired
-    private MongoTemplate mongoTemplate;
+    @Qualifier("strongMongoTemplate")
+    private MongoTemplate strongMongoTemplate;
+
+    @Autowired
+    @Qualifier("fastMongoTemplate")
+    private MongoTemplate fastMongoTemplate;
 
     @Autowired
     private StatsUpdateCounterHotel statsUpdateCounterHotel;
 
-    @Autowired
-    private DatabaseInitializer databaseInitializer;
+
 
     @Operation(summary = "Add a new hotel",
             description = "Creates a new hotel associated with the authenticated host.")
@@ -92,23 +94,30 @@ public class HostController {
 
             Hotel savedHotel = hotelRepository.save(hotel);
 
+            // Forse si può spostare dopo il punto 5??
             if (statsUpdateCounterHotel.increment()) {
-                recomputeAllStatsAsync(Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null));
+                hotelStatsAsyncService.recomputeAllStatsAsync(Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null));
             }
             // 3. Costruisci la HotelReference (partial embedding nell'host)
-            Host.HotelReference ref = new Host.HotelReference();
-            ref.setHotelId(savedHotel.getId());
-            ref.setHotelName(savedHotel.getHotelName());
-            ref.setCity(savedHotel.getCityName());
-            ref.setStars(parseStars(savedHotel.getHotelRating()));
+            try {
+                Host.HotelReference ref = new Host.HotelReference();
+                ref.setHotelId(savedHotel.getId());
+                ref.setHotelName(savedHotel.getHotelName());
+                ref.setCity(savedHotel.getCityName());
+                ref.setStars(parseStars(savedHotel.getHotelRating()));
 
-            // 4. Aggiunge e salva l'host
-            if (host.getHotels() == null) host.setHotels(new ArrayList<>());
-            host.getHotels().add(ref);
-            hostRepository.save(host);
+                if (host.getHotels() == null) host.setHotels(new ArrayList<>());
+                host.getHotels().add(ref);
+
+                hostRepository.save(host);
+
+            } catch (RuntimeException e) {
+                hotelRepository.deleteById(savedHotel.getId());
+                throw new RuntimeException("Hotel creation rolled back because Host update failed.");
+            }
 
             // 5. Update City: Document Linking & Stats
-            mongoTemplate.updateFirst(
+            fastMongoTemplate.updateFirst(
                     Query.query(Criteria.where("cityName").is(request.getCityName())),
                     new Update()
                             .push("other_hotel_ids", savedHotel.getId())
@@ -121,27 +130,6 @@ public class HostController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
-    }
-
-    @Async
-    private void recomputeAllStatsAsync(Optional<String> email, Optional<String> hotelId, Optional<String> hotelName, Optional<String> cityName) {
-        System.out.println("[Stats] Soglia raggiunta — ricalcolo statistiche...");
-
-        if (email.isPresent()) {
-            // 3. Aggiorno la City (decrementa count e pulisce array ibridi)
-            cityService.removeHotelFromCityMetrics(cityName.get(), hotelId.get(), hotelName.get());
-
-            // 4. Elimino l'Hotel fisicamente dalla collezione principale
-            hotelRepository.deleteById(hotelId.get());
-
-        }
-        else {// Pipeline 2: host_hotel → city (separata e indipendente)
-            databaseInitializer.updateCityIndexes();
-        }
-        // Neo4j sync
-        neo4jSyncService.syncAll();
-
-        System.out.println("[Stats] Ricalcolo completato.");
     }
 
     private int parseStars(String hotelRating) {
@@ -193,7 +181,7 @@ public class HostController {
             hotelRepository.save(hotel);
 
             if (statsUpdateCounterHotel.increment()) {
-                recomputeAllStatsAsync(Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null));
+                hotelStatsAsyncService.recomputeAllStatsAsync(Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null));
             }
 
             return ResponseEntity.ok("Hotel updated successfully");
@@ -247,16 +235,15 @@ public class HostController {
             // 2. Aggiorno l'Host (toglie il link nel profilo)
             hostService.removeHotelReferenceFromHost(email, hotelId);
 
-            if (statsUpdateCounterHotel.increment()) {
-                recomputeAllStatsAsync(Optional.of(email), Optional.of(hotelId), Optional.of(hotelName), Optional.of(cityName));
-            }
-
-
             // 3. Aggiorno la City (decrementa count e pulisce array ibridi)
             cityService.removeHotelFromCityMetrics(cityName, hotelId, hotelName);
 
             // 4. Elimino l'Hotel fisicamente dalla collezione principale
             hotelRepository.deleteById(hotelId);
+
+            if (statsUpdateCounterHotel.increment()) {
+                hotelStatsAsyncService.recomputeAllStatsAsync(Optional.of(email), Optional.of(hotelId), Optional.of(hotelName), Optional.of(cityName));
+            }
 
             return ResponseEntity.ok("Hotel '" + hotelName + "' removed correctly.");
 

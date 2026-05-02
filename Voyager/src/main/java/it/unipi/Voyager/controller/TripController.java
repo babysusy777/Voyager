@@ -4,7 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import it.unipi.Voyager.dto.TrendResponseDTO;
 import it.unipi.Voyager.dto.TripDTO;
 import it.unipi.Voyager.model.Traveller;
-import it.unipi.Voyager.repository.TravellerRepository;
+import it.unipi.Voyager.repository.strong.TravellerRepository;
 import it.unipi.Voyager.service.TravellerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

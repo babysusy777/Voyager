@@ -1,6 +1,7 @@
 package it.unipi.Voyager.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -17,7 +18,8 @@ import java.util.*;
 @Service
 public class CityService {
     @Autowired
-    private MongoTemplate mongoTemplate;
+    @Qualifier("fastMongoTemplate")
+    private MongoTemplate fastMongoTemplate;
 
     public void removeHotelFromCityMetrics(String cityName, String hotelId, String hotelName) {
         // 1. Cerchiamo la città per nome
@@ -31,6 +33,6 @@ public class CityService {
         // Lo togliamo da other_hotel_ids (Linking nel DB City)
         update.pull("other_hotel_ids", hotelId);
 
-        mongoTemplate.updateFirst(query, update, "cities");
+        fastMongoTemplate.updateFirst(query, update, "cities");
     }
 }

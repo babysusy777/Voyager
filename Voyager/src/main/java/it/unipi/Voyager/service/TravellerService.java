@@ -4,13 +4,13 @@ import it.unipi.Voyager.config.DatabaseInitializer;
 import it.unipi.Voyager.config.StatsUpdateCounterTrip;
 import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.Traveller;
-import it.unipi.Voyager.repository.TravellerRepository;
+import it.unipi.Voyager.repository.strong.TravellerRepository;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.bson.Document;
 import com.mongodb.client.result.UpdateResult;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import it.unipi.Voyager.config.Neo4jSyncService;
 import java.util.ArrayList;
@@ -23,7 +23,11 @@ import java.util.stream.Collectors;
 public class TravellerService {
 
     @Autowired
-    private MongoTemplate mongoTemplate;
+    @Qualifier("strongMongoTemplate")
+    private MongoTemplate strongMongoTemplate;
+
+    @Autowired
+    private TripStatsAsyncService TripStatsAsyncService;
 
     @Autowired
     private Neo4jSyncService neo4jSyncService;
@@ -32,16 +36,8 @@ public class TravellerService {
     private TravellerRepository travellerRepository;
 
     @Autowired
-    private HotelService hotelService;
-
-    @Autowired
-    private TravellerGraphRepository travellerNodeRepository;
-
-    @Autowired
     private StatsUpdateCounterTrip statsUpdateCounterTrip;
 
-    @Autowired
-    private DatabaseInitializer databaseInitializer;
 
     public Traveller setPreferences(TravellerConfigRequest request) {
         Traveller traveller = travellerRepository.findByEmail(request.getEmail())
@@ -65,17 +61,17 @@ public class TravellerService {
         return saved;
     }
 
-     // Se il viaggio con lo stesso nome esiste, lo aggiorna.
-     // Se non esiste, lo aggiunge alla lista past_trips.
-     public TravelHabitDTO getTravelHabitsByEmail(String email) {
-         // 1. Cerchiamo il traveller tramite l'email
-         Traveller traveller = travellerRepository.findByEmail(email)
-                 .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
+    // Se il viaggio con lo stesso nome esiste, lo aggiorna.
+    // Se non esiste, lo aggiunge alla lista past_trips.
+    public TravelHabitDTO getTravelHabitsByEmail(String email) {
+        // 1. Cerchiamo il traveller tramite l'email
+        Traveller traveller = travellerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Traveller non trovato con email: " + email));
 
 
-         // 2. Chiamiamo la query di aggregazione usando l'ID dell'utente trovato
-         return travellerRepository.getTravelHabits(traveller.getId());
-     }
+        // 2. Chiamiamo la query di aggregazione usando l'ID dell'utente trovato
+        return travellerRepository.getTravelHabits(traveller.getId());
+    }
 
     public TripFrequencyDTO getTripFrequencyByEmail(String email) {
         // 1. Recupero l'utente tramite email
@@ -115,7 +111,7 @@ public class TravellerService {
         if (setFields.isEmpty()) return;
 
         // 3. Eseguiamo l'update
-        UpdateResult result = mongoTemplate.getCollection("travellers")
+        UpdateResult result = strongMongoTemplate.getCollection("travellers")
                 .updateOne(query, new Document("$set", setFields));
 
         if (result.getMatchedCount() == 0) {
@@ -125,7 +121,7 @@ public class TravellerService {
         // ── Ricalcolo user_segment (sempre) ──────────────────────
         TravellerSegmentDTO newSegment = travellerRepository.computeSegment(email);
         if (newSegment != null) {
-            mongoTemplate.getCollection("travellers").updateOne(
+            strongMongoTemplate.getCollection("travellers").updateOne(
                     new Document("email", email),
                     new Document("$set", new Document("user_segment", newSegment.getSegment()))
             );
@@ -133,7 +129,7 @@ public class TravellerService {
 
         // Batch: stesso contatore condiviso
         if (statsUpdateCounterTrip.increment()) {
-            recomputeAllStatsAsync();
+            TripStatsAsyncService.recomputeAllStats();
         }
     }
 
@@ -169,19 +165,19 @@ public class TravellerService {
                 .append("past_trips.$.budget", tripDto.getBudget())
                 .append("past_trips.$.rating_given", tripDto.getRatingGiven());
 
-        UpdateResult result = mongoTemplate.getCollection("travellers")
+        UpdateResult result = strongMongoTemplate.getCollection("travellers")
                 .updateOne(query, new Document("$set", updateFields));
 
         if (result.getMatchedCount() == 0) {
             // Trip non esiste → push
             Document newTrip = new Document("trip_name", tripDto.getTripName())
-                .append("city", tripDto.getCity())
-                .append("hotels", hotelDocs)
-                .append("season", tripDto.getSeason())
-                .append("date", tripDto.getDate())
-                .append("rating_given", tripDto.getRatingGiven()).append("budget", tripDto.getBudget());
+                    .append("city", tripDto.getCity())
+                    .append("hotels", hotelDocs)
+                    .append("season", tripDto.getSeason())
+                    .append("date", tripDto.getDate())
+                    .append("rating_given", tripDto.getRatingGiven()).append("budget", tripDto.getBudget());
 
-            mongoTemplate.getCollection("travellers").updateOne(
+            strongMongoTemplate.getCollection("travellers").updateOne(
                     new Document("email", email),
                     new Document("$push", new Document("past_trips", newTrip))
             );
@@ -190,39 +186,17 @@ public class TravellerService {
         // Ricalcola e aggiorna user_segment del traveller
         TravellerSegmentDTO newSegment = travellerRepository.computeSegment(email);
         if (newSegment != null) {
-            mongoTemplate.getCollection("travellers").updateOne(
+            strongMongoTemplate.getCollection("travellers").updateOne(
                     new Document("email", email),
                     new Document("$set", new Document("user_segment", newSegment.getSegment()))
             );
         }
 
         if (statsUpdateCounterTrip.increment()) {
-            recomputeAllStatsAsync();
+            TripStatsAsyncService.recomputeAllStats();
         }
     }
 
-    @Async
-    private void recomputeAllStatsAsync() {
-        recomputeAllStats();
-    }
-
-    private void recomputeAllStats() {
-        System.out.println("[Stats] Soglia raggiunta — ricalcolo statistiche...");
-
-        // Pipeline 1: trip → hotel
-        databaseInitializer.populateGuestStats();
-        databaseInitializer.populateCityCategoryAvgVisits();
-        databaseInitializer.populateSegmentAndPreferenceDistribution();
-
-        // Pipeline 2: trip → city (separata e indipendente)
-        databaseInitializer.updateCityIndexes();
-
-        // Neo4j sync
-        neo4jSyncService.syncAll();
-        travellerNodeRepository.computeAndStoreTravelTypeAll();
-
-        System.out.println("[Stats] Ricalcolo completato.");
-    }
 
     public List<Traveller.Trip> getTripsSortedByDate(String email) {
         List<Document> pipeline = Arrays.asList(
@@ -233,10 +207,10 @@ public class TravellerService {
         );
 
         List<Document> rawResults = new ArrayList<>();
-        mongoTemplate.getCollection("travellers").aggregate(pipeline).into(rawResults);
+        strongMongoTemplate.getCollection("travellers").aggregate(pipeline).into(rawResults);
 
         return rawResults.stream()
-                .map(doc -> mongoTemplate.getConverter().read(Traveller.Trip.class, doc))
+                .map(doc -> strongMongoTemplate.getConverter().read(Traveller.Trip.class, doc))
                 .collect(Collectors.toList());
     }
 
@@ -266,7 +240,7 @@ public class TravellerService {
                         .append("starHistory", new Document("$push", "$starValue")))
         );
 
-        Document res = mongoTemplate.getCollection("travellers").aggregate(pipeline).first();
+        Document res = strongMongoTemplate.getCollection("travellers").aggregate(pipeline).first();
 
         if (res == null || res.getList("starHistory", Integer.class) == null) {
             return "INSUFFICIENT DATA";

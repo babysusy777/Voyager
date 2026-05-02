@@ -1,7 +1,7 @@
 package it.unipi.Voyager.config;
 
-import it.unipi.Voyager.repository.HostRepository;
-import it.unipi.Voyager.repository.TravellerRepository;
+import it.unipi.Voyager.repository.strong.HostRepository;
+import it.unipi.Voyager.repository.strong.TravellerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
