@@ -12,38 +12,6 @@ import java.util.List;
 @Repository
 public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode, String> {
 
-    //Travelers who have a similar profile in terms of personal information,
-    //preferences, preferred season and budget range,
-    //and that visited the same cities (medium weight), or same hotels (heavy weight)
-
-    @Query("""
-        MATCH (t1:Traveller {email: $email})
-        MATCH (t2:Traveller) WHERE t1 <> t2
-        WITH t1, t2,
-            (CASE WHEN t1.preferencesSeason = t2.preferencesSeason THEN 1 ELSE 0 END +
-             CASE WHEN t1.preferencesBudget = t2.preferencesBudget THEN 1 ELSE 0 END +
-             CASE WHEN t1.travelType = t2.travelType AND t1.travelType IS NOT NULL THEN 1 ELSE 0 END +
-             // Calcolo differenza età: se <= 5 aggiunge 0.5
-             CASE WHEN abs(t1.age - t2.age) <= 5 THEN 0.5 ELSE 0 END) AS profileScore
-        
-        OPTIONAL MATCH (t1)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(h:Hotel)<-[:STAYED_AT]-(:Trip)<-[:MADE_TRIP]-(t2)
-        
-        WITH t1, t2, profileScore, count(DISTINCT h) AS hotelScore
-        WITH t1, t2, (profileScore * 1 + hotelScore * 4) AS finalScore
-        WHERE finalScore > 2
-        
-        MERGE (t1)-[s:SIMILAR_TO]->(t2)
-        SET s.score = finalScore
-    """)
-    void computeAndSaveSimilarity(String email);
-
-    // Query per ottenere i primi 10 simili
-    @Query("MATCH (t1:Traveller {email: $email})-[s:SIMILAR_TO]->(t2:Traveller) " +
-            "OPTIONAL MATCH (t2)-[:MADE_TRIP]->(trip:Trip) " +
-            "WITH t2, s, collect(trip) AS trips " +
-            "RETURN t2, trips ORDER BY s.score DESC LIMIT 10")
-    List<TravellerNode> findTopSimilarTravellers(String email);
-
     // Returning Travelers
     @Query("""
         MATCH (t:Traveller {email: $email})-[:MADE_TRIP]->(trip:Trip)-[:STAYED_AT]->(h:Hotel)-[:LOCATED_IN]->(c:City)
@@ -71,9 +39,24 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
     """)
     List<AttractionDiscoveryDTO> findReturningTravelerTips(String email);
 
-    // Recommendations
+    //calcola la similarity e la recommendation
     @Query("""
-        MATCH (me:Traveller {email: $email})-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:NEAR_TO]->(a:Attraction)
+        MATCH (me:Traveller {email: $email})
+        MATCH (other:Traveller) WHERE me <> other
+        WITH me, other,
+            (CASE WHEN me.preferencesSeason = other.preferencesSeason THEN 1 ELSE 0 END +
+             CASE WHEN me.preferencesBudget = other.preferencesBudget THEN 1 ELSE 0 END +
+             CASE WHEN me.travelType = other.travelType AND me.travelType IS NOT NULL THEN 1 ELSE 0 END +
+             CASE WHEN abs(me.age - other.age) <= 5 THEN 0.5 ELSE 0 END) AS profileScore
+    
+        OPTIONAL MATCH (me)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(h:Hotel)<-[:STAYED_AT]-(:Trip)<-[:MADE_TRIP]-(other)
+        WITH me, other, profileScore, count(DISTINCT h) AS hotelScore
+        WITH me, other, (profileScore * 1 + hotelScore * 4) AS similarityScore
+        WHERE similarityScore > 2
+        ORDER BY similarityScore DESC
+        LIMIT 5
+    
+        MATCH (me)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:NEAR_TO]->(a:Attraction)
         WITH me, collect(DISTINCT a.category) AS myPreferredCategories
     
         OPTIONAL MATCH (me)-[:MADE_TRIP]->(:Trip)-[:IN_CITY]->(visitedCity:City)

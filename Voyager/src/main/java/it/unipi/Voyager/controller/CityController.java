@@ -95,7 +95,7 @@ public class CityController {
     }
 
     @Operation(summary = "Find similar cities",
-            description = "Returns a list of cities similar to the given one, based on shared attraction categories.")
+            description = "Returns a list of cities similar to the given one, based on shared attraction categories, cost of living, kind of city and best season to visit the city.")
     @GetMapping("/similar-cities")
     public ResponseEntity<?> getSimilarCities(@RequestParam String cityName) {
         List<CitySimilarityDTO> similarCities = cityGraphService.getSimilarCities(cityName);

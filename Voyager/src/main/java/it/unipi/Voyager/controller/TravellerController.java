@@ -95,7 +95,6 @@ public class TravellerController {
             description = "Returns a ranked list of hotels based on travel history.")
     @GetMapping("/recommendation")
     public ResponseEntity<List<RecommendationDTO>> getRecommendations(@RequestParam String email) {
-        travellerGraphRepository.computeAndSaveSimilarity(email);
         List<RecommendationDTO> recommendations = travellerGraphRepository.getPersonalizedRecommendations(email);
         if (recommendations.isEmpty()) {
             return ResponseEntity.noContent().build();
