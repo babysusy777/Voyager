@@ -1,4 +1,4 @@
-package it.unipi.Voyager.repository;
+package it.unipi.Voyager.repository.strong;
 
 import it.unipi.Voyager.dto.TravelHabitDTO;
 import it.unipi.Voyager.dto.TripFrequencyDTO;
@@ -6,7 +6,6 @@ import it.unipi.Voyager.model.Traveller;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;

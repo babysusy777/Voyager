@@ -5,6 +5,7 @@ import it.unipi.Voyager.model.graph.*;
 import it.unipi.Voyager.repository.graph.*;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.neo4j.core.Neo4jClient;
@@ -19,7 +20,12 @@ import java.util.Map;
 public class Neo4jSyncService {
 
     @Autowired
-    private MongoTemplate mongoTemplate; // Per MongoDB
+    @Qualifier("fastMongoTemplate")
+    private MongoTemplate fastMongoTemplate;
+
+    @Autowired
+    @Qualifier("strongMongoTemplate")
+    private MongoTemplate strongMongoTemplate;
 
     @Autowired
     private Neo4jClient neo4jClient;
@@ -88,7 +94,7 @@ public class Neo4jSyncService {
     private void syncHotels() {
         System.out.println("[Neo4j] Sync Hotel...");
         List<Document> hotels = new ArrayList<>();
-        mongoTemplate.getCollection("hotels").find().into(hotels);
+        fastMongoTemplate.getCollection("hotels").find().into(hotels);
 
         for (Document hotelDoc : hotels) {
             String hotelName = hotelDoc.getString("HotelName");
@@ -139,7 +145,7 @@ public class Neo4jSyncService {
     private void syncTravellers() {
         System.out.println("[Neo4j] Sync Traveller...");
         List<Document> travellers = new ArrayList<>();
-        mongoTemplate.getCollection("travellers").find().into(travellers);
+        strongMongoTemplate.getCollection("travellers").find().into(travellers);
 
         for (Document tDoc : travellers) {
             String email = tDoc.getString("email");
@@ -198,14 +204,14 @@ public class Neo4jSyncService {
 
     // Sincronizza un singolo traveller a partire dall'email (per update)
     public void syncTravellerByEmail(String email) {
-        Document tDoc = mongoTemplate.getCollection("travellers")
+        Document tDoc = strongMongoTemplate.getCollection("travellers")
                 .find(new Document("email", email)).first();
         if (tDoc != null) syncTravellerNode(tDoc);
     }
 
     // Sincronizza un singolo hotel a partire dal nome (per update)
     public void syncHotelByName(String hotelName, String cityName) {
-        Document hotelDoc = mongoTemplate.getCollection("hotels")
+        Document hotelDoc = fastMongoTemplate.getCollection("hotels")
                 .find(new Document("HotelName", hotelName).append("cityName", cityName)).first();
         if (hotelDoc == null) return;
 

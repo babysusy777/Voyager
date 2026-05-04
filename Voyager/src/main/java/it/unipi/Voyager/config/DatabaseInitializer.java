@@ -5,6 +5,7 @@ import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import it.unipi.Voyager.service.AttractionService;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
@@ -22,8 +23,6 @@ import java.util.List;
 @Order(2) // Eseguito dopo DataIngestionService
 public class DatabaseInitializer {
 
-    @Autowired
-    private MongoTemplate mongoTemplate;
 
     @Autowired
     private Neo4jSyncService neo4jSyncService;
@@ -32,12 +31,17 @@ public class DatabaseInitializer {
     private TravellerGraphRepository travellerNodeRepository;
 
     @Autowired
-    private AttractionService attractionService;
+    @Qualifier("fastMongoTemplate")
+    private MongoTemplate fastMongoTemplate;
+
+    @Autowired
+    @Qualifier("strongMongoTemplate")
+    private MongoTemplate strongMongoTemplate;
 
     public void initializeHotelStats() {
         // Esegui gli step solo se guestStats non è ancora stato popolato
         // Controlla se almeno un hotel ha totalVisits > 0
-        long alreadyPopulated = mongoTemplate.getCollection("hotels")
+        long alreadyPopulated = fastMongoTemplate.getCollection("hotels")
                 .countDocuments(new Document("guestStats.totalVisits", new Document("$gt", 0)));
 
         if (alreadyPopulated > 0) {
@@ -62,7 +66,7 @@ public class DatabaseInitializer {
         System.out.println("[Init] Sincronizzazione totalVisits nelle città...");
 
         // 1. Prendi tutti i nomi delle città che hai nel DB degli hotel
-        List<String> cities = mongoTemplate.getCollection("hotels")
+        List<String> cities = fastMongoTemplate.getCollection("hotels")
                 .distinct("cityName", String.class)
                 .into(new ArrayList<>());
 
@@ -75,7 +79,7 @@ public class DatabaseInitializer {
                             .sum("guestStats.totalVisits").as("totalVisits")
             );
 
-            AggregationResults<Document> results = mongoTemplate.aggregate(agg, "hotels", Document.class);
+            AggregationResults<Document> results = fastMongoTemplate.aggregate(agg, "hotels", Document.class);
             Document res = results.getUniqueMappedResult();
 
             if (res != null) {
@@ -90,7 +94,7 @@ public class DatabaseInitializer {
                         .set("city_index.hotel_count", count)
                         .set("city_index.demand_ratio", ratio);
 
-                mongoTemplate.updateFirst(query, update, "cities");
+                fastMongoTemplate.updateFirst(query, update, "cities");
             }
         }
         System.out.println("[Init] City Index aggiornato con successo.");
@@ -99,7 +103,7 @@ public class DatabaseInitializer {
     public void populateGuestStats() {
         System.out.println("[Init] Step 1 — totalVisits e seasonality.counts...");
 
-        MongoCollection<Document> travellers = mongoTemplate.getCollection("travellers");
+        MongoCollection<Document> travellers = strongMongoTemplate.getCollection("travellers");
 
         List<Document> pipeline = Arrays.asList(
                 // 1. Srotola i viaggi
@@ -155,7 +159,7 @@ public class DatabaseInitializer {
     public void populateCityCategoryAvgVisits() {
         System.out.println("[Init] Step 2 — city_category_avg_visits...");
 
-        MongoCollection<Document> hotels = mongoTemplate.getCollection("hotels");
+        MongoCollection<Document> hotels = fastMongoTemplate.getCollection("hotels");
 
         List<Document> pairs = hotels.aggregate(Arrays.asList(
                 new Document("$group", new Document("_id",
@@ -203,7 +207,7 @@ public class DatabaseInitializer {
     private void populateTravellerSegments() {
         System.out.println("[Init] Step 3 — user_segment sui travellers...");
 
-        MongoCollection<Document> travellers = mongoTemplate.getCollection("travellers");
+        MongoCollection<Document> travellers = strongMongoTemplate.getCollection("travellers");
 
         List<Document> pipeline = Arrays.asList(
                 // 1. Srotoliamo i viaggi
@@ -280,7 +284,7 @@ public class DatabaseInitializer {
     public void populateSegmentAndPreferenceDistribution() {
         System.out.println("[Init] Step 4 — segment_distribution e preference_distribution...");
 
-        MongoCollection<Document> travellers = mongoTemplate.getCollection("travellers");
+        MongoCollection<Document> travellers = strongMongoTemplate.getCollection("travellers");
 
         List<Document> pipeline = Arrays.asList(
                 // 1. Srotola i viaggi

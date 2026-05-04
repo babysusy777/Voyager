@@ -1,16 +1,16 @@
 package it.unipi.Voyager.service;
 
 import it.unipi.Voyager.dto.FacilitiesGapDTO;
-import it.unipi.Voyager.dto.HostHotelUpdateRequest;
 import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
 import it.unipi.Voyager.dto.VisibilityGapDTO;
 import it.unipi.Voyager.model.Host;
 import it.unipi.Voyager.model.Hotel;
-import it.unipi.Voyager.repository.HostRepository;
-import it.unipi.Voyager.repository.HotelRepository;
+import it.unipi.Voyager.repository.strong.HostRepository;
+import it.unipi.Voyager.repository.fast.HotelRepository;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,12 @@ import java.util.stream.Collectors;
 public class HostService {
 
     @Autowired
-    private MongoTemplate mongoTemplate;
+    @Qualifier("strongMongoTemplate")
+    private MongoTemplate strongMongoTemplate;
+
+    @Autowired
+    @Qualifier("fastMongoTemplate")
+    private MongoTemplate fastMongoTemplate;
 
     @Autowired
     private HotelRepository hotelRepository;
@@ -33,7 +38,7 @@ public class HostService {
     public List<VisibilityGapDTO> getGapSimple(String email) {
         // 1. Recupero l'host
         Document hostFilter = new Document("email", email);
-        Document hostDoc = mongoTemplate.getCollection("hosts").find(hostFilter).first();
+        Document hostDoc = strongMongoTemplate.getCollection("hosts").find(hostFilter).first();
 
         if (hostDoc == null) return Collections.emptyList();
 
@@ -45,7 +50,7 @@ public class HostService {
             // Recuperiamo i dati dal riferimento (Partial Embedding)
             String hotelId = ref.getString("hotel_id");
 
-            Document hotelDoc = mongoTemplate.getCollection("hotels")
+            Document hotelDoc = fastMongoTemplate.getCollection("hotels")
                     .find(new Document("_id", new ObjectId(hotelId)))
                     .first();
 
@@ -104,16 +109,16 @@ public class HostService {
     }
 
 
-        public void removeHotelReferenceFromHost(String email, String hotelId) {
-            Host host = hostRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("Host not found"));
+    public void removeHotelReferenceFromHost(String email, String hotelId) {
+        Host host = hostRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Host not found"));
 
-            if (host.getHotels() != null) {
-                // Rimuove l'hotelId corrispondente dalla lista dei riferimenti
-                host.getHotels().removeIf(ref -> ref.getHotelId().equals(hotelId));
-                hostRepository.save(host);
-            }
+        if (host.getHotels() != null) {
+            // Rimuove l'hotelId corrispondente dalla lista dei riferimenti
+            host.getHotels().removeIf(ref -> ref.getHotelId().equals(hotelId));
+            hostRepository.save(host);
         }
+    }
 
     public FacilitiesGapDTO getFacilitiesGap(String email, String hotelName, String cityName) {
 
@@ -136,6 +141,6 @@ public class HostService {
                 hotel.getFacilities()
         );
     }
-    }
+}
 
 

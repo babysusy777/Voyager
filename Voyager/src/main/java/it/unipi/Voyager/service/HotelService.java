@@ -1,17 +1,13 @@
 package it.unipi.Voyager.service;
 
 import it.unipi.Voyager.dto.HotelConcentrationDTO;
-import it.unipi.Voyager.dto.FacilitiesGapDTO;
-import it.unipi.Voyager.dto.HotelConcentrationDTO;
-import it.unipi.Voyager.model.Host;
-import it.unipi.Voyager.model.Hotel;
-import it.unipi.Voyager.repository.HotelRepository;
+import it.unipi.Voyager.repository.fast.HotelRepository;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -19,7 +15,8 @@ import java.util.List;
 public class HotelService {
 
     @Autowired
-    private MongoTemplate mongoTemplate;
+    @Qualifier("fastMongoTemplate")
+    private MongoTemplate fastMongoTemplate;
 
     @Autowired
     private HotelRepository hotelRepository;
@@ -52,7 +49,7 @@ public class HotelService {
         );
 
 
-        mongoTemplate.getCollection("hotels").aggregate(pipeline).toCollection();
+        fastMongoTemplate.getCollection("hotels").aggregate(pipeline).toCollection();
 
         System.out.println("Update completato per " + cityName + " [" + hotelRating + "]");
     }
@@ -78,7 +75,7 @@ public class HotelService {
 
         // Step 1: incrementa totalVisits e counts stagionali — ora con cityName come secondo filtro
         String seasonField = "guestStats.seasonality.counts." + season;
-        mongoTemplate.getCollection("hotels").updateOne(
+        fastMongoTemplate.getCollection("hotels").updateOne(
                 new Document("HotelName", hotelName).append("cityName", cityName),
                 new Document("$inc", new Document("guestStats.totalVisits", 1)
                         .append(seasonField, 1))
@@ -87,7 +84,7 @@ public class HotelService {
          * SOS Relazionalità: trip->hotel->prendo il rating dell'Hotel per andare in City e ricalcolare city_category_avg !!!
         */
         // Step 2: recupera rating per ricalcolare city_category_avg (cityName già noto)
-        Document hotel = mongoTemplate.getCollection("hotels")
+        Document hotel = fastMongoTemplate.getCollection("hotels")
                 .find(new Document("HotelName", hotelName).append("cityName", cityName))
                 .projection(new Document("HotelRating", 1))
                 .first();
@@ -99,7 +96,7 @@ public class HotelService {
         updateDistributions(hotelName);
 
         // Step 4: aggiorna city_index
-        Document cityDoc = mongoTemplate.getCollection("cities")
+        Document cityDoc = fastMongoTemplate.getCollection("cities")
                 .find(new Document("cityName", cityName))
                 .projection(new Document("city_index", 1))
                 .first();
@@ -107,7 +104,7 @@ public class HotelService {
         if (cityDoc != null) {
             Document cityIndex = cityDoc.get("city_index", Document.class);
             int hotelCount = cityIndex != null ? cityIndex.getInteger("hotel_count", 1) : 1;
-            mongoTemplate.getCollection("cities").updateOne(
+            fastMongoTemplate.getCollection("cities").updateOne(
                     new Document("cityName", cityName),
                     Arrays.asList(
                             new Document("$set", new Document("city_index.total_visits",
@@ -123,7 +120,7 @@ public class HotelService {
 
         // Step 5: aggiorna seasonality della città
         String citySeasonField = "seasonality." + season;
-        mongoTemplate.getCollection("cities").updateOne(
+        fastMongoTemplate.getCollection("cities").updateOne(
                 new Document("cityName", cityName),
                 Arrays.asList(
                         new Document("$set", new Document(citySeasonField,
@@ -263,12 +260,12 @@ public class HotelService {
                 )
         );
 
-        Document result = mongoTemplate.getCollection("travellers")
+        Document result = fastMongoTemplate.getCollection("travellers")
                 .aggregate(pipeline).first();
 
         if (result == null) return;
 
-        mongoTemplate.getCollection("hotels").updateOne(
+        fastMongoTemplate.getCollection("hotels").updateOne(
                 new Document("HotelName", hotelName),
                 new Document("$set", new Document()
                         .append("guestStats.segment_distribution",    result.get("segment_distribution"))

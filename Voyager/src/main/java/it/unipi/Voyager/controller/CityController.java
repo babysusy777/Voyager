@@ -3,7 +3,7 @@ package it.unipi.Voyager.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.City;
-import it.unipi.Voyager.repository.CityRepository;
+import it.unipi.Voyager.repository.fast.CityRepository;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import it.unipi.Voyager.service.AttractionService;
 import it.unipi.Voyager.service.HotelService;
@@ -13,8 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 

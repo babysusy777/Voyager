@@ -1,10 +1,9 @@
 package it.unipi.Voyager.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import it.unipi.Voyager.dto.FacilitiesGapDTO;
 import it.unipi.Voyager.dto.HotelConcentrationDTO;
 import it.unipi.Voyager.dto.HotelSearchDTO;
-import it.unipi.Voyager.repository.HotelRepository;
+import it.unipi.Voyager.repository.fast.HotelRepository;
 import it.unipi.Voyager.service.HotelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

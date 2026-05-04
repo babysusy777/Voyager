@@ -1,4 +1,4 @@
-package it.unipi.Voyager.repository;
+package it.unipi.Voyager.repository.fast;
 
 import it.unipi.Voyager.dto.HotelConcentrationDTO;
 import it.unipi.Voyager.dto.FacilitiesGapDTO;

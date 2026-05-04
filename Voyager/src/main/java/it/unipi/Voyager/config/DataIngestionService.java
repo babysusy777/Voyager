@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unipi.Voyager.model.UserRole;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
@@ -21,7 +22,12 @@ import java.util.*;
 public class DataIngestionService {
 
     @Autowired
-    private MongoTemplate mongoTemplate;
+    @Qualifier("fastMongoTemplate")
+    private MongoTemplate fastMongoTemplate;
+
+    @Autowired
+    @Qualifier("strongMongoTemplate")
+    private MongoTemplate strongMongoTemplate;
 
     @Autowired
     private DatabaseInitializer databaseInitializer;
@@ -41,13 +47,13 @@ public class DataIngestionService {
     // ─── HOTELS ───────────────────────────────────────────────────
 
     private void ingestHotels() {
-        if (mongoTemplate.getCollection("hotels").countDocuments() > 0) {
+        if (fastMongoTemplate.getCollection("hotels").countDocuments() > 0) {
             System.out.println("[Ingestion] Hotels già presenti, skip.");
             return;
         }
         try {
             // Crea l'indice unique su HotelName + cityName PRIMA dell'inserimento
-            mongoTemplate.getCollection("hotels").createIndex(
+            fastMongoTemplate.getCollection("hotels").createIndex(
                     new Document("HotelName", 1).append("cityName", 1),
                     new com.mongodb.client.model.IndexOptions().unique(true)
             );
@@ -103,7 +109,7 @@ public class DataIngestionService {
                 docs.add(doc);
             }
 
-            mongoTemplate.getCollection("hotels").insertMany(docs);
+            fastMongoTemplate.getCollection("hotels").insertMany(docs);
             System.out.println("[Ingestion] Hotels inseriti: " + docs.size());
 
         } catch (Exception e) {
@@ -114,7 +120,7 @@ public class DataIngestionService {
     // ─── HOSTS ────────────────────────────────────────────────────
 
     private void ingestHosts() {
-        if (mongoTemplate.getCollection("hosts").countDocuments() > 0) {
+        if (strongMongoTemplate.getCollection("hosts").countDocuments() > 0) {
             System.out.println("[Ingestion] Hosts già presenti, skip.");
             return;
         }
@@ -122,7 +128,7 @@ public class DataIngestionService {
             // Costruisce lookup: "HotelName::cityName" -> MongoDB _id (stringa hex)
             // Usato per linkare gli hotel embedded negli host al documento hotel reale
             Map<String, String> hotelIdLookup = new HashMap<>();
-            mongoTemplate.getCollection("hotels")
+            fastMongoTemplate.getCollection("hotels")
                     .find()
                     .forEach(h -> {
                         String key = h.getString("HotelName") + "::" + h.getString("cityName");
@@ -162,7 +168,7 @@ public class DataIngestionService {
                 docs.add(doc);
             }
 
-            mongoTemplate.getCollection("hosts").insertMany(docs);
+            strongMongoTemplate.getCollection("hosts").insertMany(docs);
             System.out.println("[Ingestion] Hosts inseriti: " + docs.size());
 
         } catch (Exception e) {
@@ -173,7 +179,7 @@ public class DataIngestionService {
     // ─── TRAVELLERS ───────────────────────────────────────────────
 
     private void ingestTravellers() {
-        if (mongoTemplate.getCollection("travellers").countDocuments() > 0) {
+        if (strongMongoTemplate.getCollection("travellers").countDocuments() > 0) {
             System.out.println("[Ingestion] Travellers già presenti, skip.");
             return;
         }
@@ -225,7 +231,7 @@ public class DataIngestionService {
                 docs.add(doc);
             }
 
-            mongoTemplate.getCollection("travellers").insertMany(docs);
+            strongMongoTemplate.getCollection("travellers").insertMany(docs);
             System.out.println("[Ingestion] Travellers inseriti: " + docs.size());
 
         } catch (Exception e) {
@@ -236,12 +242,12 @@ public class DataIngestionService {
     // ─── CITIES ───────────────────────────────────────────────────
 
     private void ingestCities() {
-        if (mongoTemplate.getCollection("cities").countDocuments() > 0) {
+        if (fastMongoTemplate.getCollection("cities").countDocuments() > 0) {
             System.out.println("[Ingestion] Cities già presenti, skip.");
             return;
         }
         try {
-            mongoTemplate.getCollection("cities").createIndex(
+            fastMongoTemplate.getCollection("cities").createIndex(
                     new Document("cityName", 1),
                     new com.mongodb.client.model.IndexOptions().unique(true)
             );
@@ -264,7 +270,7 @@ public class DataIngestionService {
 
                 // 2. Recupero Hotel della città per strategia IBRIDA
                 List<Document> allHotelsInCity = new ArrayList<>();
-                mongoTemplate.getCollection("hotels")
+                fastMongoTemplate.getCollection("hotels")
                         .find(new Document("cityName", cityName))
                         .forEach(allHotelsInCity::add);
 
@@ -297,7 +303,7 @@ public class DataIngestionService {
                 docs.add(doc);
             }
 
-            mongoTemplate.getCollection("cities").insertMany(docs);
+            fastMongoTemplate.getCollection("cities").insertMany(docs);
             System.out.println("[Ingestion] Cities inserite con strategia ibrida: " + docs.size());
 
         } catch (Exception e) {

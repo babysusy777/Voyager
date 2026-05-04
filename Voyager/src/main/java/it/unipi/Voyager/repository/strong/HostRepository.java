@@ -1,4 +1,4 @@
-package it.unipi.Voyager.repository;
+package it.unipi.Voyager.repository.strong;
 
 import it.unipi.Voyager.model.Host;
 import org.bson.types.ObjectId;
