@@ -83,8 +83,8 @@ public class TravellerController {
     @Operation(summary = "Find similar travellers",
             description = "Returns a list of travellers most similar to the given user, based on travel type, preferences and behavioral segment.")
     @GetMapping("/similar-friends")
-    public ResponseEntity<List<TravellerSimilarityDTO>> getSimilarTravellers(@RequestParam String email) {
-        List<TravellerSimilarityDTO> result = recommendationService.getSuggestions(email);
+    public ResponseEntity<List<RecommendationDTO>> getSimilarTravellers(@RequestParam String email) {
+        List<RecommendationDTO> result = recommendationService.getSuggestions(email);
         if (result.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
