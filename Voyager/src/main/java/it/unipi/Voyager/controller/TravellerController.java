@@ -6,7 +6,6 @@ import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.repository.strong.TravellerRepository;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
 import it.unipi.Voyager.service.TravellerService;
-import it.unipi.Voyager.service.graph.RecommendationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,9 +22,6 @@ public class TravellerController {
 
     @Autowired
     private TravellerRepository travellerRepository;
-
-    @Autowired
-    private RecommendationService recommendationService;
 
     @Autowired
     private TravellerGraphRepository travellerGraphRepository;
@@ -84,7 +80,7 @@ public class TravellerController {
             description = "Returns a list of travellers most similar to the given user, based on travel type, preferences and behavioral segment.")
     @GetMapping("/similar-friends")
     public ResponseEntity<List<RecommendationDTO>> getSimilarTravellers(@RequestParam String email) {
-        List<RecommendationDTO> result = recommendationService.getSuggestions(email);
+        List<RecommendationDTO> result = travellerGraphRepository.getSimilarTravellersRecommendation(email);
         if (result.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -101,5 +97,6 @@ public class TravellerController {
         }
         return ResponseEntity.ok(recommendations);
     }
+
 
 }
