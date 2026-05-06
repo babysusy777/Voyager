@@ -76,9 +76,9 @@ public class TravellerController {
         }
     }
 
-    @Operation(summary = "Find similar travellers",
-            description = "Returns a list of travellers most similar to the given user, based on travel type, preferences and behavioral segment.")
-    @GetMapping("/similar-friends")
+    @Operation(summary = "City and Hotel recommendations for the traveller based on similar travellers",
+            description = "Returns a list of cities and hotels based on similar travelers.")
+    @GetMapping("/similar_travellers_reccomendation")
     public ResponseEntity<List<RecommendationDTO>> getSimilarTravellers(@RequestParam String email) {
         List<RecommendationDTO> result = travellerGraphRepository.getSimilarTravellersRecommendation(email);
         if (result.isEmpty()) {
@@ -88,8 +88,8 @@ public class TravellerController {
     }
 
     @Operation(summary = "City and Hotel recommendations for the traveller",
-            description = "Returns a ranked list of hotels based on travel history.")
-    @GetMapping("/recommendation")
+            description = "Returns a list of cities and hotels based on travel history.")
+    @GetMapping("/history_based_recommendation")
     public ResponseEntity<List<RecommendationDTO>> getRecommendations(@RequestParam String email) {
         List<RecommendationDTO> recommendations = travellerGraphRepository.getPersonalizedRecommendations(email);
         if (recommendations.isEmpty()) {

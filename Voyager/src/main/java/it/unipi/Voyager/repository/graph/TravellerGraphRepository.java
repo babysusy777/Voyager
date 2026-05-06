@@ -42,20 +42,15 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
     //recommendation based on past trips and preferences
     @Query("""
         MATCH (me:Traveller {email: $email})
-            
-        // Deriva categorie preferite dai trip passati
         MATCH (me)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:NEAR_TO]->(a:Attraction)
         WITH me, collect(DISTINCT a.category) AS myPreferredCategories
 
-        // Città già visitate dal target
         OPTIONAL MATCH (me)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:LOCATED_IN]->(visitedCity:City)
         WITH me, myPreferredCategories, collect(DISTINCT visitedCity) AS myCities
 
-        // Candidate: città non ancora visitate
         MATCH (h:Hotel)-[:LOCATED_IN]->(newCity:City)
         WHERE NOT newCity IN myCities
 
-        // Match attrazioni città con preferenze
         OPTIONAL MATCH (newCity)<-[:IN_CITY]-(cityAttr:Attraction)
         WITH me, h, newCity, myPreferredCategories, count(DISTINCT cityAttr) AS totalCityAttr
 
@@ -63,7 +58,6 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
         WHERE matchAttr.category IN myPreferredCategories
         WITH me, h, newCity, myPreferredCategories, totalCityAttr, count(DISTINCT matchAttr) AS cityMatchCount
 
-        // Match attrazioni vicine all'hotel con preferenze
         OPTIONAL MATCH (h)-[:NEAR_TO]->(hotelAttr:Attraction)
         WHERE hotelAttr.category IN myPreferredCategories
         OPTIONAL MATCH (h)-[:NEAR_TO]->(anyAttr:Attraction)
@@ -101,11 +95,9 @@ public interface TravellerGraphRepository extends Neo4jRepository<TravellerNode,
             WHERE similarityScore > 2
             ORDER BY similarityScore DESC LIMIT 5
             
-            // Città già visitate dal target
             OPTIONAL MATCH (me)-[:MADE_TRIP]->(:Trip)-[:STAYED_AT]->(:Hotel)-[:LOCATED_IN]->(visitedCity:City)
             WITH me, other, similarityScore, collect(DISTINCT visitedCity) AS myCities
             
-            // Città e hotel visitati dai simili, non ancora visitati dal target
             MATCH (other)-[:MADE_TRIP]->(trip:Trip)-[:STAYED_AT]->(h:Hotel)-[:LOCATED_IN]->(c:City)
             WHERE NOT c IN myCities
             
