@@ -24,7 +24,7 @@ public class MongoPolicyConfig {
 
     @Bean
     public MongoDatabaseFactory mongoDatabaseFactory(MongoClient mongoClient) {
-        return new SimpleMongoClientDatabaseFactory(mongoClient, "travel_db");
+        return new SimpleMongoClientDatabaseFactory(mongoClient, "voyager");
     }
 
     @Primary

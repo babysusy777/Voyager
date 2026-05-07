@@ -418,6 +418,12 @@ public class DatabaseInitializer {
     }
 
     private void populateTravelTypes() {
+        long count = travellerNodeRepository.count();
+        if (count > 0) {
+            System.out.println("[Init] Neo4j già popolato, skip.");
+            return;
+        }
+
         System.out.println("[Init] Step 5 — travelType sui nodi Traveller Neo4j...");
         neo4jSyncService.syncAll();
         travellerNodeRepository.computeAndStoreTravelTypeAll();
