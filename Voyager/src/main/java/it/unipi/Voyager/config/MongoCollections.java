@@ -20,7 +20,7 @@ public class MongoCollections {
 
     public MongoDatabase strongDatabase() {
         return mongoClient
-                .getDatabase("travel_db")
+                .getDatabase("voyager")
                 .withReadPreference(ReadPreference.primary())
                 .withReadConcern(ReadConcern.MAJORITY)
                 .withWriteConcern(WriteConcern.MAJORITY.withJournal(true));
@@ -28,7 +28,7 @@ public class MongoCollections {
 
     public MongoDatabase fastDatabase() {
         return mongoClient
-                .getDatabase("travel_db")
+                .getDatabase("voyager")
                 .withReadPreference(ReadPreference.secondaryPreferred())
                 .withReadConcern(ReadConcern.LOCAL)
                 .withWriteConcern(WriteConcern.W1);
