@@ -25,7 +25,9 @@ public class TripController {
     private TravellerRepository travellerRepository;
 
     @Operation(summary = "Partially update a trip",
-            description = "Allows partial update of a trip's fields via PATCH. Only the fields included in the request body will be updated.")
+            description = "Allows partial update of a trip's fields via PATCH. Only the fields included in the request body will be updated." +
+                    "Format:" +
+                    "name of the field to be changed : value, both in quotation marks. ")
     @PatchMapping("/{email}/trips/{tripName}")
     public ResponseEntity<String> updateTripFields(
             @PathVariable String email,
@@ -57,7 +59,12 @@ public class TripController {
     }
 
     @Operation(summary = "Create a trip",
-            description = "Inserts a new trip for the given traveller. Rating is from 1 to 5")
+            description = "Inserts a new trip for the given traveller." +
+                    "Format:" +
+                    "Stars: one/two/three/four/fiveStar" +
+                    "Season: winter, spring, summer, fall" +
+                    "Budget: low, medium, high" +
+                    "Rating is from 1 to 5")
     @PostMapping("/{email}/upsert")
     public ResponseEntity<String> upsertTrip(
             @PathVariable String email,

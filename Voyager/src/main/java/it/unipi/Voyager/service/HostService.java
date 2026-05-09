@@ -2,6 +2,7 @@ package it.unipi.Voyager.service;
 
 import it.unipi.Voyager.dto.FacilitiesGapDTO;
 import it.unipi.Voyager.dto.SeasonalConcentrationDTO;
+import it.unipi.Voyager.dto.TypicalGuestProfileDTO;
 import it.unipi.Voyager.dto.VisibilityGapDTO;
 import it.unipi.Voyager.model.Host;
 import it.unipi.Voyager.model.Hotel;
@@ -34,6 +35,86 @@ public class HostService {
 
     @Autowired
     private HostRepository hostRepository;
+
+    public TypicalGuestProfileDTO getTypicalGuestProfile(String email, String hotelName, String cityName) {
+
+        Host host = hostRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Host not found"));
+
+        Host.HotelReference targetRef = host.getHotels().stream()
+                .filter(h -> h.getHotelName().equalsIgnoreCase(hotelName)
+                        && h.getCity().equalsIgnoreCase(cityName))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Hotel not found in your management list"));
+
+        Hotel hotel = hotelRepository.findById(targetRef.getHotelId())
+                .orElseThrow(() -> new RuntimeException("Hotel data inconsistency: ID not found in global collection"));
+
+        Hotel.GuestStats guestStats = hotel.getGuestStats();
+
+        if (guestStats == null) {
+            return new TypicalGuestProfileDTO(
+                    hotel.getId(),
+                    hotel.getHotelName(),
+                    hotel.getCityName(),
+                    0,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0.0,
+                    0.0
+            );
+        }
+
+        int totalVisits = guestStats.getTotalVisits();
+
+        String dominantSegment = null;
+        Map<String, Double> segmentDistribution = null;
+
+        if (guestStats.getSegmentDistribution() != null) {
+            dominantSegment = guestStats.getSegmentDistribution().getDominantSegment();
+            segmentDistribution = guestStats.getSegmentDistribution().getSegments();
+        }
+
+        Map<String, Integer> seasonality = null;
+        String dominantSeason = null;
+
+        if (guestStats.getSeasonality() != null) {
+            seasonality = guestStats.getSeasonality().getCounts();
+            dominantSeason = getDominantSeason(seasonality);
+        }
+
+        double cityCategoryAvgVisits = guestStats.getCityCategoryAvgVisits();
+
+        double visibilityGap = totalVisits - cityCategoryAvgVisits;
+
+        return new TypicalGuestProfileDTO(
+                hotel.getId(),
+                hotel.getHotelName(),
+                hotel.getCityName(),
+                totalVisits,
+                dominantSegment,
+                segmentDistribution,
+                dominantSeason,
+                seasonality,
+                cityCategoryAvgVisits,
+                visibilityGap
+        );
+    }
+
+    private String getDominantSeason(Map<String, Integer> seasonality) {
+
+        if (seasonality == null || seasonality.isEmpty()) {
+            return null;
+        }
+
+        return seasonality.entrySet()
+                .stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
+    }
 
     public List<VisibilityGapDTO> getGapSimple(String email) {
         // 1. Recupero l'host

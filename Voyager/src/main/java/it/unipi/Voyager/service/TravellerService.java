@@ -3,6 +3,7 @@ package it.unipi.Voyager.service;
 import it.unipi.Voyager.config.DatabaseInitializer;
 import it.unipi.Voyager.config.StatsUpdateCounterTrip;
 import it.unipi.Voyager.dto.*;
+import it.unipi.Voyager.model.TravelType;
 import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.repository.strong.TravellerRepository;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
@@ -37,6 +38,68 @@ public class TravellerService {
 
     @Autowired
     private StatsUpdateCounterTrip statsUpdateCounterTrip;
+
+    public TravellerConfigRequest updatePreferences(TravellerConfigRequest request) {
+
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new RuntimeException("Email is required");
+        }
+
+        Traveller traveller = travellerRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Traveller not found with email: " + request.getEmail()));
+
+        if (traveller.getPreferences() == null) {
+            traveller.setPreferences(new Traveller.Preferences());
+        }
+
+        boolean updated = false;
+
+        if (request.getBudget() != null && !request.getBudget().isBlank()) {
+            traveller.getPreferences().setBudget(request.getBudget().toLowerCase());
+            updated = true;
+        }
+
+        if (request.getSeason() != null && !request.getSeason().isBlank()) {
+            traveller.getPreferences().setSeason(request.getSeason().toLowerCase());
+            updated = true;
+        }
+
+        if (request.getTravelType() != null) {
+            traveller.getPreferences().setTravelType(request.getTravelType().name());
+            updated = true;
+        }
+
+        if (!updated) {
+            throw new RuntimeException("No preference field provided. Allowed fields: budget, season, travelType");
+        }
+
+        Traveller savedTraveller = travellerRepository.save(traveller);
+
+        return mapTravellerToConfigRequest(savedTraveller);
+    }
+
+    private TravellerConfigRequest mapTravellerToConfigRequest(Traveller traveller) {
+
+        TravellerConfigRequest response = new TravellerConfigRequest();
+
+        response.setEmail(traveller.getEmail());
+        response.setGender(traveller.getGender());
+        response.setAge(traveller.getAge());
+        response.setCountry(traveller.getCountry());
+
+        if (traveller.getPreferences() != null) {
+            response.setBudget(traveller.getPreferences().getBudget());
+            response.setSeason(traveller.getPreferences().getSeason());
+
+            if (traveller.getPreferences().getTravelType() != null) {
+                response.setTravelType(
+                        TravelType.valueOf(traveller.getPreferences().getTravelType())
+                );
+            }
+        }
+
+        return response;
+    }
 
 
     public Traveller setPreferences(TravellerConfigRequest request) {

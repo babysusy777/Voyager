@@ -263,4 +263,19 @@ public class HostController {
         return ResponseEntity.ok(result);
     }
 
+    @Operation(summary = "Typical guest profile for a host hotel",
+            description = "Returns the typical guest profile for a hotel owned by the host, using precomputed hotel stats.")
+    @GetMapping("/typical-guest-profile")
+    public ResponseEntity<?> getTypicalGuestProfile(
+            @RequestParam String email,
+            @RequestParam String hotelName,
+            @RequestParam String cityName) {
+        try {
+            TypicalGuestProfileDTO result = hostService.getTypicalGuestProfile(email, hotelName, cityName);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }

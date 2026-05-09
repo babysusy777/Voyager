@@ -102,7 +102,7 @@ public class CityController {
 
         if (similarCities.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body("Nessuna città simile trovata o città non esistente.");
+                    .body("No similar city found or the city does not exist");
         }
 
         return ResponseEntity.ok(similarCities);

@@ -7,7 +7,7 @@ public record CityDTO(
         String costOfLiving,
         String safety,
         String bestTimeToVisit,
-        List<HotelSummaryDTO> topValueHotels
+        List<HotelSummaryDTO> Hotels
 ) {
     public record HotelSummaryDTO(
             String hotelName,

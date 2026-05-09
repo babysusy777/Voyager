@@ -5,6 +5,7 @@ import it.unipi.Voyager.dto.*;
 import it.unipi.Voyager.model.Traveller;
 import it.unipi.Voyager.repository.strong.TravellerRepository;
 import it.unipi.Voyager.repository.graph.TravellerGraphRepository;
+import it.unipi.Voyager.service.HotelService;
 import it.unipi.Voyager.service.TravellerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,9 @@ public class TravellerController {
     private TravellerRepository travellerRepository;
 
     @Autowired
+    private HotelService hotelService;
+
+    @Autowired
     private TravellerGraphRepository travellerGraphRepository;
 
     @Operation(summary = "Configure traveller's preferences",
@@ -34,6 +38,38 @@ public class TravellerController {
         try {
             Traveller traveller = travellerService.setPreferences(request);
             return ResponseEntity.ok(traveller);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Update traveller's preferences",
+            description = "Updates traveller preferences using email. " +
+                    "Only provided fields will be updated. " +
+                    "travelType values: RELAX, ADVENTURE, CULTURAL, BUSINESS, FAMILY, NIGHTLIFE. " +
+                    "budget values: low, medium, high.")
+    @PatchMapping("/preferences")
+    public ResponseEntity<?> updateTravellerPreferences(@RequestBody TravellerConfigRequest request) {
+        try {
+            TravellerConfigRequest updatedTraveller = travellerService.updatePreferences(request);
+            return ResponseEntity.ok(updatedTraveller);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Find hotels with the best quality-to-price ratio",
+            description = "The traveller provides a city name. The system retrieves hotels in that city and computes the quality-to-price ratio as: (facilities count + stars + average) / averagePrice. Returns the top 5 hotels.")
+    @GetMapping("/best-quality-price-hotels")
+    public ResponseEntity<?> getBestQualityPriceHotels(@RequestParam String cityName) {
+        try {
+            List<QualityPriceHotelDTO> result = hotelService.getBestQualityPriceHotelsByCity(cityName);
+
+            if (result.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+
+            return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -78,7 +114,7 @@ public class TravellerController {
 
     @Operation(summary = "City and Hotel recommendations for the traveller based on similar travellers",
             description = "Returns a list of cities and hotels based on similar travelers.")
-    @GetMapping("/similar_travellers_reccomendation")
+    @GetMapping("/similar_travellers_recommendations")
     public ResponseEntity<List<RecommendationDTO>> getSimilarTravellers(@RequestParam String email) {
         List<RecommendationDTO> result = travellerGraphRepository.getSimilarTravellersRecommendation(email);
         if (result.isEmpty()) {

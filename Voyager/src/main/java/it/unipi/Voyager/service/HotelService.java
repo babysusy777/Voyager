@@ -1,14 +1,20 @@
 package it.unipi.Voyager.service;
 
 import it.unipi.Voyager.dto.HotelConcentrationDTO;
+import it.unipi.Voyager.dto.QualityPriceHotelDTO;
+import it.unipi.Voyager.model.Hotel;
 import it.unipi.Voyager.repository.fast.HotelRepository;
 import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -20,6 +26,125 @@ public class HotelService {
 
     @Autowired
     private HotelRepository hotelRepository;
+
+    public List<QualityPriceHotelDTO> getBestQualityPriceHotelsByCity(String cityName) {
+
+        if (cityName == null || cityName.isBlank()) {
+            throw new RuntimeException("City name is required");
+        }
+
+        List<Document> pipeline = List.of(
+                new Document("$match",
+                        new Document("cityName", cityName)
+                                .append("average_price_per_night", new Document("$gt", 0))
+                ),
+
+                new Document("$project", new Document()
+                        .append("HotelName", 1)
+                        .append("cityName", 1)
+                        .append("HotelRating", 1)
+                        .append("HotelFacilities", 1)
+                        .append("average_price_per_night", 1)
+                        .append("guestStats", 1)
+
+                        .append("facilitiesCount",
+                                new Document("$size",
+                                        new Document("$ifNull", List.of("$HotelFacilities", List.of()))
+                                )
+                        )
+
+                        .append("stars",
+                                new Document("$switch", new Document()
+                                        .append("branches", List.of(
+                                                new Document("case", new Document("$eq", List.of("$HotelRating", "OneStar"))).append("then", 1),
+                                                new Document("case", new Document("$eq", List.of("$HotelRating", "TwoStar"))).append("then", 2),
+                                                new Document("case", new Document("$eq", List.of("$HotelRating", "ThreeStar"))).append("then", 3),
+                                                new Document("case", new Document("$eq", List.of("$HotelRating", "FourStar"))).append("then", 4),
+                                                new Document("case", new Document("$eq", List.of("$HotelRating", "FiveStar"))).append("then", 5)
+                                        ))
+                                        .append("default", 0)
+                                )
+                        )
+
+                        .append("average",
+                                new Document("$ifNull", List.of("$guestStats.city_category_avg_visits", 0))
+                        )
+                ),
+
+                new Document("$addFields",
+                        new Document("qualityPriceRatio",
+                                new Document("$divide", List.of(
+                                        new Document("$add", List.of(
+                                                "$facilitiesCount",
+                                                "$stars",
+                                                "$average"
+                                        )),
+                                        "$average_price_per_night"
+                                ))
+                        )
+                ),
+
+                new Document("$sort",
+                        new Document("qualityPriceRatio", -1)
+                ),
+
+                new Document("$limit", 5)
+        );
+
+        List<Document> results = fastMongoTemplate
+                .getCollection("hotels")
+                .aggregate(pipeline)
+                .into(new ArrayList<>());
+
+        List<QualityPriceHotelDTO> bestHotels = new ArrayList<>();
+
+        for (Document document : results) {
+
+            String hotelId = document.getObjectId("_id").toHexString();
+            String hotelName = document.getString("HotelName");
+            String hotelCityName = document.getString("cityName");
+            String hotelRating = document.getString("HotelRating");
+
+            int stars = document.getInteger("stars", 0);
+            int facilitiesCount = document.getInteger("facilitiesCount", 0);
+
+            double averagePrice = getDoubleValue(document, "average_price_per_night");
+            double qualityPriceRatio = getDoubleValue(document, "qualityPriceRatio");
+
+            List<String> facilities = document.getList("HotelFacilities", String.class);
+
+            QualityPriceHotelDTO dto = new QualityPriceHotelDTO(
+                    hotelId,
+                    hotelName,
+                    hotelCityName,
+                    hotelRating,
+                    stars,
+                    facilitiesCount,
+                    averagePrice,
+                    qualityPriceRatio,
+                    facilities
+            );
+
+            bestHotels.add(dto);
+        }
+
+        return bestHotels;
+    }
+
+    private double getDoubleValue(Document document, String fieldName) {
+        Object value = document.get(fieldName);
+
+        if (value == null) {
+            return 0.0;
+        }
+
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+
+        return 0.0;
+    }
+
 
     public void updateCityCategoryAvgVisits(String cityName, String hotelRating) {
 
