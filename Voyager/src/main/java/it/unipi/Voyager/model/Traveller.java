@@ -120,6 +120,9 @@ public class Traveller {
 
         public int getRatingGiven() { return ratingGiven; }
         public void setRatingGiven(int ratingGiven) { this.ratingGiven = ratingGiven; }
+
+        public String getBudget() { return budget; }
+        public void setBudget(String budget) { this.budget = budget; }
     }
 
     // ─── Getters & Setters (Traveler) ─────────────────────────

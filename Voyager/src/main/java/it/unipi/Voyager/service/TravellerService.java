@@ -238,7 +238,8 @@ public class TravellerService {
                     .append("hotels", hotelDocs)
                     .append("season", tripDto.getSeason())
                     .append("date", tripDto.getDate())
-                    .append("rating_given", tripDto.getRatingGiven()).append("budget", tripDto.getBudget());
+                    .append("rating_given", tripDto.getRatingGiven())
+                    .append("budget", tripDto.getBudget());
 
             strongMongoTemplate.getCollection("travellers").updateOne(
                     new Document("email", email),
