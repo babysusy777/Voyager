@@ -30,8 +30,8 @@ public class City {
 
     @Field("some_hotels")
     private List<HotelSummary> someHotels;
-    @Field("other_hotel_ids")
-    private List<String> otherHotelIds;
+    @Field("other_hotel_names")
+    private List<String> otherHotelNames;
 
     public static class CityIndex {
 
@@ -101,7 +101,7 @@ public class City {
     public List<HotelSummary> getSomeHotels() { return someHotels; }
     public void setSomeHotels(List<HotelSummary> someHotels) { this.someHotels = someHotels; }
 
-    public List<String> getOtherHotelIds() { return otherHotelIds; }
-    public void setOtherHotelIds(List<String> otherHotelIds) { this.otherHotelIds = otherHotelIds; }
+    public List<String> getOtherHotelNames() { return otherHotelNames; }
+    public void setOtherHotelIds(List<String> otherHotelNames) { this.otherHotelNames = otherHotelNames; }
 
 }

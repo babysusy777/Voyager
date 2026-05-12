@@ -290,12 +290,12 @@ public class DataIngestionService {
                 doc.append("some_hotels", someHotels);
 
                 // --- LINKING (Tutti gli altri ID) ---
-                List<String> otherHotelIds = new ArrayList<>();
+                List<String> otherHotelNames = new ArrayList<>();
                 for (int i = limit; i < allHotelsInCity.size(); i++) {
                     Document h = allHotelsInCity.get(i);
-                    otherHotelIds.add(h.getObjectId("_id").toHexString());
+                    otherHotelNames.add(h.getString("HotelName"));
                 }
-                doc.append("other_hotel_ids", otherHotelIds);
+                doc.append("other_hotel_names", otherHotelNames);
 
                 // 3. Altri campi
                 doc.append("city_index", new Document("total_visits", 0).append("hotel_count", allHotelsInCity.size()));
