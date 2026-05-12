@@ -28,8 +28,8 @@ public class City {
     @Field("city_index")
     private CityIndex cityIndex;
 
-    @Field("top_value_hotels")
-    private List<HotelSummary> topValueHotels;
+    @Field("some_hotels")
+    private List<HotelSummary> someHotels;
     @Field("other_hotel_ids")
     private List<String> otherHotelIds;
 
@@ -98,8 +98,8 @@ public class City {
     public CityIndex getCityIndex() { return cityIndex; }
     public void setCityIndex(CityIndex cityIndex) { this.cityIndex = cityIndex; }
 
-    public List<HotelSummary> getTopValueHotels() { return topValueHotels; }
-    public void setTopValueHotels(List<HotelSummary> topValueHotels) { this.topValueHotels = topValueHotels; }
+    public List<HotelSummary> getSomeHotels() { return someHotels; }
+    public void setSomeHotels(List<HotelSummary> someHotels) { this.someHotels = someHotels; }
 
     public List<String> getOtherHotelIds() { return otherHotelIds; }
     public void setOtherHotelIds(List<String> otherHotelIds) { this.otherHotelIds = otherHotelIds; }

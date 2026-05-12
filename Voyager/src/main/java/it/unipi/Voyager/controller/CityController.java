@@ -47,7 +47,7 @@ public class CityController {
 
     // Metodo di supporto per la conversione
     private CityDTO convertToDTO(City city) {
-        List<CityDTO.HotelSummaryDTO> hotelDTOs = city.getTopValueHotels().stream()
+        List<CityDTO.HotelSummaryDTO> hotelDTOs = city.getSomeHotels().stream()
                 .map(h -> new CityDTO.HotelSummaryDTO(
                         h.getHotelName(),
                         h.getHotelStars(),

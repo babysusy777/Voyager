@@ -277,17 +277,17 @@ public class DataIngestionService {
                 // --- PARTIAL EMBEDDING (20 casuali) ---
                 Collections.shuffle(allHotelsInCity);
 
-                List<Document> topValueHotels = new ArrayList<>();
+                List<Document> someHotels = new ArrayList<>();
                 int limit = Math.min(allHotelsInCity.size(), 20);
                 for (int i = 0; i < limit; i++) {
                     Document h = allHotelsInCity.get(i);
-                    topValueHotels.add(new Document()
+                    someHotels.add(new Document()
                             .append("hotel_name", h.getString("HotelName"))
                             .append("stars",      h.getString("HotelRating"))
                             .append("avg_price",  h.getDouble("average_price_per_night"))
                     );
                 }
-                doc.append("top_value_hotels", topValueHotels);
+                doc.append("some_hotels", someHotels);
 
                 // --- LINKING (Tutti gli altri ID) ---
                 List<String> otherHotelIds = new ArrayList<>();
