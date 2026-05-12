@@ -32,8 +32,10 @@ public interface CityGraphRepository extends Neo4jRepository<CityNode, String> {
             "(CASE WHEN c1.category = c2.category THEN 1.0 ELSE 0.0 END * 0.30 + " +
             " CASE WHEN c1.bestTimeToVisit = c2.bestTimeToVisit THEN 1.0 ELSE 0.0 END * 0.25 + " +
             " CASE WHEN c1.costOfLiving = c2.costOfLiving THEN 1.0 ELSE 0.0 END * 0.05) AS metaScore " +
-            "RETURN c2.cityName AS city, " +
-            "(attractionScore * 0.60 + metaScore * 0.40) AS cosineSimilarity " +
-            "ORDER BY cosineSimilarity DESC LIMIT 5")
+            "WITH c1, c2, (attractionScore * 0.60 + metaScore * 0.40) AS score " +
+            "ORDER BY score DESC LIMIT 5 " +
+            "MERGE (c1)-[r:SIMILAR_TO]->(c2) " +
+            "SET r.score = score " +
+            "RETURN c2.cityName AS city, score AS cosineSimilarity")
     List<CitySimilarityDTO> findSimilarCities(String cityName);
 }
