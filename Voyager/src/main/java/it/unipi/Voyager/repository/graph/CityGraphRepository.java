@@ -37,5 +37,10 @@ public interface CityGraphRepository extends Neo4jRepository<CityNode, String> {
             "MERGE (c1)-[r:SIMILAR_TO]->(c2) " +
             "SET r.score = score " +
             "RETURN c2.cityName AS city, score AS cosineSimilarity")
+    List<CitySimilarityDTO> computeSimilarCities(String cityName);
+
+    @Query("MATCH (c1:City {cityName: $cityName})-[r:SIMILAR_TO]->(c2:City) " +
+            "RETURN c2.cityName AS city, r.score AS cosineSimilarity " +
+            "ORDER BY cosineSimilarity DESC LIMIT 5")
     List<CitySimilarityDTO> findSimilarCities(String cityName);
 }

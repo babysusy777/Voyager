@@ -66,7 +66,8 @@ public class HostController {
     @Autowired
     private StatsUpdateCounterHotel statsUpdateCounterHotel;
 
-
+    @Autowired
+    private Neo4jSyncService neo4jSyncService;
 
     @Operation(summary = "Add a new hotel",
             description = "Creates a new hotel associated with the authenticated host.")
@@ -93,10 +94,11 @@ public class HostController {
             // guestStats lasciato null: nessuna visita ancora
 
             Hotel savedHotel = hotelRepository.save(hotel);
+            neo4jSyncService.syncHotelByName(savedHotel.getHotelName(), savedHotel.getCityName());
 
             // Forse si può spostare dopo il punto 5??
             if (statsUpdateCounterHotel.increment()) {
-                hotelStatsAsyncService.recomputeAllStatsAsync(Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null));
+                hotelStatsAsyncService.recomputeAllStatsAsync();
             }
             // 3. Costruisci la HotelReference (partial embedding nell'host)
             try {
@@ -175,13 +177,13 @@ public class HostController {
                         .findFirst()
                         .ifPresent(h -> h.setStars(parseStars(request.getHotelRating())));
                 hostRepository.save(host);
-
+                neo4jSyncService.syncHotelByName(hotel.getHotelName(), hotel.getCityName());
             }
 
             hotelRepository.save(hotel);
 
             if (statsUpdateCounterHotel.increment()) {
-                hotelStatsAsyncService.recomputeAllStatsAsync(Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null),Optional.ofNullable(null));
+                hotelStatsAsyncService.recomputeAllStatsAsync();
             }
 
             return ResponseEntity.ok("Hotel updated successfully");
@@ -240,9 +242,10 @@ public class HostController {
 
             // 4. Elimino l'Hotel fisicamente dalla collezione principale
             hotelRepository.deleteById(hotelId);
+            neo4jSyncService.deleteHotelNode(hotelName, cityName);
 
             if (statsUpdateCounterHotel.increment()) {
-                hotelStatsAsyncService.recomputeAllStatsAsync(Optional.of(email), Optional.of(hotelId), Optional.of(hotelName), Optional.of(cityName));
+                hotelStatsAsyncService.recomputeAllStatsAsync();
             }
 
             return ResponseEntity.ok("Hotel '" + hotelName + "' removed correctly.");

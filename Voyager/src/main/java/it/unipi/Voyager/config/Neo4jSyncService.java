@@ -41,6 +41,7 @@ public class Neo4jSyncService {
         syncCitiesAndAttractions();
         syncHotels();
         syncTravellers();
+        computeCitySimilarities();
     }
 
     // Step A: City + Attraction + IN_CITY
@@ -261,6 +262,15 @@ public class Neo4jSyncService {
                 .run();
 
         System.out.println("[Neo4j] Tentata cancellazione nodo Hotel: " + hotelName);
+    }
+
+    public void computeCitySimilarities() {
+        System.out.println("[Neo4j] Computing city similarities...");
+        cityGraphRepository.findAll()
+                .stream()
+                .map(CityNode::getCityName)
+                .forEach(cityGraphRepository::computeSimilarCities);
+        System.out.println("[Neo4j] City similarities completato.");
     }
 
     // ─── UTILITY ──────────────────────────────────────────────────
