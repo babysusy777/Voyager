@@ -235,7 +235,7 @@ public class DatabaseInitializer {
                         .append("unique_cities", new Document("$addToSet", "$past_trips.city"))
                         // Media delle stelle accedendo al nuovo path hotels.hotelStars
                         // Nota: se hotelStars è salvato come Stringa, usa {$toDouble: "$past_trips.hotels.hotelStars"}
-                        .append("avg_stars", new Document("$avg", "$past_trips.hotels.hotelStars"))
+                        .append("avg_stars", new Document("$avg", "$numericStars"))
                         .append("total_trips", new Document("$sum", 1))
                 ),
 
@@ -335,12 +335,14 @@ public class DatabaseInitializer {
                         .append("HotelName", "$_id.hotelName")
                         .append("cityName", "$_id.cityName")
                         .append("guestStats", new Document()
-                                .append("segment_distribution", new Document()
-                                        .append("explorer", new Document("$divide", Arrays.asList("$explorer", "$total")))
-                                        .append("comfort-seeker", new Document("$divide", Arrays.asList("$comfort_seeker", "$total")))
-                                        .append("upgrader", new Document("$divide", Arrays.asList("$upgrader", "$total")))
-                                        .append("budget-hunter", new Document("$divide", Arrays.asList("$budget_hunter", "$total")))
-                                        .append("dominant_segment", new Document("$switch", new Document("branches", Arrays.asList(
+                                .append("segmentDistribution", new Document()
+                                        .append("segments", new Document()
+                                                .append("explorer", new Document("$divide", Arrays.asList("$explorer", "$total")))
+                                                .append("comfort-seeker", new Document("$divide", Arrays.asList("$comfort_seeker", "$total")))
+                                                .append("upgrader", new Document("$divide", Arrays.asList("$upgrader", "$total")))
+                                                .append("budget-hunter", new Document("$divide", Arrays.asList("$budget_hunter", "$total")))
+                                        )
+                                        .append("dominantSegment", new Document("$switch", new Document("branches", Arrays.asList(
                                                 new Document("case", new Document("$and", Arrays.asList(
                                                         new Document("$gte", Arrays.asList("$explorer", "$comfort_seeker")),
                                                         new Document("$gte", Arrays.asList("$explorer", "$upgrader")),
@@ -405,7 +407,7 @@ public class DatabaseInitializer {
                         .append("on", Arrays.asList("HotelName", "cityName"))
                         .append("whenMatched", Arrays.asList(
                                 new Document("$set", new Document()
-                                        .append("guestStats.segment_distribution", "$$new.guestStats.segment_distribution")
+                                        .append("guestStats.segmentDistribution", "$$new.guestStats.segmentDistribution")
                                         .append("guestStats.preference_distribution", "$$new.guestStats.preference_distribution")
                                 )
                         ))

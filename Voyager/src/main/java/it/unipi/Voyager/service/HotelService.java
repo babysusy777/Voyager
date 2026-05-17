@@ -131,6 +131,71 @@ public class HotelService {
         return bestHotels;
     }
 
+    /*
+
+    db.hotels.aggregate([
+  {
+    $match: { cityName: "Frome",maverage_price_per_night: { $gt: 0 }}
+  },
+  {
+    $project: { HotelName: 1, cityName: 1,
+      HotelRating: 1,
+      HotelFacilities: 1,
+      average_price_per_night: 1,
+      guestStats: 1,
+
+      facilitiesCount: {
+        $size: {
+          $ifNull: ["$HotelFacilities", []]
+        }
+      },
+
+      stars: {
+        $switch: {
+          branches: [
+            { case: { $eq: ["$HotelRating", "OneStar"] }, then: 1 },
+            { case: { $eq: ["$HotelRating", "TwoStar"] }, then: 2 },
+            { case: { $eq: ["$HotelRating", "ThreeStar"] }, then: 3 },
+            { case: { $eq: ["$HotelRating", "FourStar"] }, then: 4 },
+            { case: { $eq: ["$HotelRating", "FiveStar"] }, then: 5 }
+          ],
+          default: 0
+        }
+      },
+
+      average: {
+        $ifNull: ["$guestStats.city_category_avg_visits", 0]
+      }
+    }
+  },
+  {
+    $addFields: {
+      qualityPriceRatio: {
+        $divide: [
+          {
+            $add: [
+              "$facilitiesCount",
+              "$stars",
+              "$average"
+            ]
+          },
+          "$average_price_per_night"
+        ]
+      }
+    }
+  },
+  {
+    $sort: {
+      qualityPriceRatio: -1
+    }
+  },
+  {
+    $limit: 5
+  }
+])
+
+    */
+
     private double getDoubleValue(Document document, String fieldName) {
         Object value = document.get(fieldName);
 

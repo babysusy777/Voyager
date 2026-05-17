@@ -104,6 +104,16 @@ public class DataIngestionService {
                                         .append("winter", 0)
                                 )
                         )
+                        .append("segmentDistribution", new Document()
+                                .append("segments", new Document()
+                                        .append("explorer", 0.0)
+                                        .append("comfort-seeker", 0.0)
+                                        .append("upgrader", 0.0)
+                                        .append("budget-hunter", 0.0)
+                                )
+                                .append("dominantSegment", null)
+                        )
+                        .append("city_category_avg_visits", 0.0)
                 );
 
                 docs.add(doc);

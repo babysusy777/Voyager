@@ -36,14 +36,13 @@ public class HostService {
     @Autowired
     private HostRepository hostRepository;
 
-    public TypicalGuestProfileDTO getTypicalGuestProfile(String email, String hotelName, String cityName) {
+    public TypicalGuestProfileDTO getTypicalGuestProfile(String email, String hotelName) {
 
         Host host = hostRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Host not found"));
 
         Host.HotelReference targetRef = host.getHotels().stream()
-                .filter(h -> h.getHotelName().equalsIgnoreCase(hotelName)
-                        && h.getCity().equalsIgnoreCase(cityName))
+                .filter(h -> h.getHotelName().equalsIgnoreCase(hotelName))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Hotel not found in your management list"));
 

@@ -271,10 +271,9 @@ public class HostController {
     @GetMapping("/typical-guest-profile")
     public ResponseEntity<?> getTypicalGuestProfile(
             @RequestParam String email,
-            @RequestParam String hotelName,
-            @RequestParam String cityName) {
+            @RequestParam String hotelName) {
         try {
-            TypicalGuestProfileDTO result = hostService.getTypicalGuestProfile(email, hotelName, cityName);
+            TypicalGuestProfileDTO result = hostService.getTypicalGuestProfile(email, hotelName);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
