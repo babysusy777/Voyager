@@ -3,12 +3,14 @@ package it.unipi.Voyager.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.List;
 
 @Document(collection = "travellers")
+@CompoundIndex(name = "traveller_email_unique_idx", def = "{'email': 1}", unique = true)
 public class Traveller {
 
     @Id
