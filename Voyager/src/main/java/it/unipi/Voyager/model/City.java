@@ -7,7 +7,6 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import java.util.List;
 
 @Document(collection = "cities")
-@CompoundIndex(name = "city_name_unique_idx", def = "{'cityName': 1}", unique = true)
 public class City {
 
     @Field("cityName")
