@@ -2,12 +2,14 @@ package it.unipi.Voyager.model;
 
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.List;
 
 @Document(collection = "hosts")
+@CompoundIndex(name = "host_email_unique_idx", def = "{'email': 1}", unique = true)
 public class Host {
 
     @Id
